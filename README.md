@@ -39,6 +39,11 @@ El proyecto se desarrollará utilizando las siguientes tecnologías:
 | S3 (MinIO o AWS)                 | Almacenamiento de imágenes/fotos GPS        | Ideal para centralizar fotos georreferenciadas.                            |
 | Supabase (opcional)              | Reemplazo cloud para PostGIS + API + Auth   | Para un enfoque Backend as a Service (BaaS).                               |
 
+## 📌 Documentos del proyecto
+
+- [Bitácora de avances](./BITACORA.md)
+
+
 ## Este es un proyecto en curso. Las siguiente etapas son:
 
 - **Diseñar base de datos**
