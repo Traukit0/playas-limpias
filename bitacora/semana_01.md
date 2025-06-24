@@ -16,7 +16,7 @@
 
 ### ⚠️ Dificultades encontradas
 
-- Por llenar aun
+- Una opción posible fue utilizar Supabase ya que a la fecha de comienzo del proyecto consta con soporte para PostGIS. Se optó por contenedor local ya que Supabase aún carece de características avanzadas como procesamiento con GDAL.
 
 ---
 
