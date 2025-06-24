@@ -6,7 +6,8 @@ Este documento centraliza el seguimiento del progreso del proyecto, organizado p
 
 ## 📁 Índice de semanas
 
-- [Semana 3 - 10 de junio](./bitacora/semana_03.md) ✅
+- [Semana 1 - 23 de junio](./bitacora/semana_01.md) ✅
+- [Semana 3 - 07 de julio](./bitacora/semana_03.md) ✅
 
 ---
 
