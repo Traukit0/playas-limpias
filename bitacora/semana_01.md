@@ -8,7 +8,7 @@
 ### ✅ Actividades realizadas
 
 - Elección del stack tecnológico a utilizar y su implementación: PostgreSQL + PostGIS, despliegue en contendor local a través de [docker-compose.yml](./docker-compose.yml)
-- Definición de esquema base de datos.
+- Definición de [esquema base de datos](./db/schema.sql).
 - Pruebas básicas de ingreso de datos a la BD para corroborar estructura de la misma.
 - Documentación técnica preliminar sobre estructura BD.
 
@@ -23,7 +23,7 @@
 
 ### 🔜 Acciones pendientes o planificadas
 
-- Por llenar aun
+- Revisar estructura BD para que cubra un caso básico a fin de poder mostrar PMV.
 
 ---
 
