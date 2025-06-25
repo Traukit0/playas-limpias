@@ -11,6 +11,7 @@
 - Definición de [esquema base de datos](/db/schema.sql).
 - Pruebas básicas de ingreso de datos a la BD para corroborar estructura de la misma.
 - Documentación técnica preliminar sobre estructura BD.
+- Creación de estructura básica inicial para el backend
 
 ---
 

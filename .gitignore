@@ -1,1 +1,11 @@
 .env
+
+# Entornos virtuales de Python
+backend/backend_venv/
+venv/
+env/
+.venv/
+.env/
+ENV/
+env.bak/
+venv.bak/
