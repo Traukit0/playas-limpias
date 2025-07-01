@@ -16,3 +16,4 @@ app.add_middleware(
 # Incluir rutas
 app.include_router(usuarios.router, prefix="/usuarios", tags=["Usuarios"])
 app.include_router(denuncias.router, prefix="/denuncias", tags=["Denuncias"])
+app.include_router(usuarios.router, prefix="/usuarios", tags=["Usuarios"])
