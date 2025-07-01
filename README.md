@@ -44,7 +44,4 @@ El proyecto se desarrollará utilizando las siguientes tecnologías:
 - [Bitácora de avances](./BITACORA.md)
 
 
-## Este es un proyecto en curso. Las siguiente etapas son:
-
-- **Diseñar base de datos**
-- **Montar PostGIS para pruebas**
+## Este es un proyecto en curso
