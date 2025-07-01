@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import usuarios, denuncias, evidencias, concesiones, analisis
+from routes import usuarios, denuncias, evidencias, concesiones, analisis, estados
 
 app = FastAPI()
 
@@ -19,3 +19,4 @@ app.include_router(denuncias.router, prefix="/denuncias", tags=["Denuncias"])
 app.include_router(evidencias.router, prefix="/evidencias", tags=["Evidencias"])
 app.include_router(concesiones.router, prefix="/concesiones", tags=["Concesiones"])
 app.include_router(analisis.router, prefix="/analisis", tags=["Análisis Geoespacial"])
+app.include_router(estados.router, prefix="/estados_denuncia", tags=["Catálogos"])
