@@ -1,13 +1,13 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Dict, Any
 
-class ConcesionResponse(BaseModel):
+class ConcesionResponseGeoJSON(BaseModel):
     id_concesion: int
     titular: str
     tipo: Optional[str]
     nombre: Optional[str]
     region: Optional[str]
-    wkt: str  # Polygon en formato texto legible (WKT)
+    geom: Dict[str, Any]  # GeoJSON
 
     class Config:
         orm_mode = True

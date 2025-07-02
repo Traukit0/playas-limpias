@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from db import SessionLocal
 from models.concesiones import Concesion
-from schemas.concesiones import ConcesionResponse
+from schemas.concesiones import ConcesionResponseGeoJSON
 from security.auth import verificar_token
 from typing import List
-from sqlalchemy import text
+import json
 
 router = APIRouter()
 
@@ -16,9 +17,8 @@ def get_db():
     finally:
         db.close()
 
-@router.get("/", response_model=List[ConcesionResponse], dependencies=[Depends(verificar_token)])
+@router.get("/", response_model=List[ConcesionResponseGeoJSON], dependencies=[Depends(verificar_token)])
 def listar_concesiones(db: Session = Depends(get_db)):
-    # Se usa raw SQL para extraer geom como WKT
     rows = db.execute(text("""
         SELECT
             id_concesion,
@@ -26,18 +26,18 @@ def listar_concesiones(db: Session = Depends(get_db)):
             tipo,
             nombre,
             region,
-            ST_AsText(geom) AS wkt
+            ST_AsGeoJSON(geom) AS geojson
         FROM concesiones
     """)).fetchall()
 
     resultado = []
     for row in rows:
-        resultado.append(ConcesionResponse(
+        resultado.append(ConcesionResponseGeoJSON(
             id_concesion=row.id_concesion,
             titular=row.titular,
             tipo=row.tipo,
             nombre=row.nombre,
             region=row.region,
-            wkt=row.wkt
+            geom=json.loads(row.geojson)
         ))
     return resultado
