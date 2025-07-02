@@ -1,17 +1,13 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Dict, Any
 
-class EvidenciaBase(BaseModel):
+class EvidenciaCreateGeoJSON(BaseModel):
     id_denuncia: int
-    lon: float = Field(..., description="Longitud en formato decimal")
-    lat: float = Field(..., description="Latitud en formato decimal")
+    coordenadas: Dict[str, Any] = Field(..., description="Geometría en formato GeoJSON (Point)")
     descripcion: Optional[str] = None
     foto_url: Optional[str] = None
 
-class EvidenciaCreate(EvidenciaBase):
-    pass
-
-class EvidenciaResponse(EvidenciaBase):
+class EvidenciaResponseGeoJSON(EvidenciaCreateGeoJSON):
     id_evidencia: int
 
     class Config:

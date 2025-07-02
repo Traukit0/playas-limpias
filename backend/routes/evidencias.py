@@ -1,13 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from db import SessionLocal
 from models.evidencias import Evidencia
 from models.denuncias import Denuncia
-from schemas.evidencias import EvidenciaCreate, EvidenciaResponse
+from schemas.evidencias import EvidenciaCreateGeoJSON, EvidenciaResponseGeoJSON
 from geoalchemy2.shape import from_shape
-from shapely.geometry import Point
+from shapely.geometry import shape
 from security.auth import verificar_token
 from typing import List
+import json
 
 router = APIRouter()
 
@@ -18,13 +20,13 @@ def get_db():
     finally:
         db.close()
 
-@router.post("/", response_model=EvidenciaResponse, dependencies=[Depends(verificar_token)])
-def crear_evidencia(evidencia: EvidenciaCreate, db: Session = Depends(get_db)):
+@router.post("/", response_model=EvidenciaResponseGeoJSON, dependencies=[Depends(verificar_token)])
+def crear_evidencia(evidencia: EvidenciaCreateGeoJSON, db: Session = Depends(get_db)):
     denuncia = db.query(Denuncia).filter(Denuncia.id_denuncia == evidencia.id_denuncia).first()
     if not denuncia:
         raise HTTPException(status_code=404, detail="Denuncia no encontrada")
 
-    punto = from_shape(Point(evidencia.lon, evidencia.lat), srid=4326)
+    punto = from_shape(shape(evidencia.coordenadas), srid=4326)
 
     nueva = Evidencia(
         id_denuncia=evidencia.id_denuncia,
@@ -35,31 +37,34 @@ def crear_evidencia(evidencia: EvidenciaCreate, db: Session = Depends(get_db)):
     db.add(nueva)
     db.commit()
     db.refresh(nueva)
-    return EvidenciaResponse(
+
+    coords_json = db.execute(
+        text("SELECT ST_AsGeoJSON(coordenadas) FROM evidencias WHERE id_evidencia = :id"),
+        {"id": nueva.id_evidencia}
+    ).scalar()
+
+    return EvidenciaResponseGeoJSON(
         id_evidencia=nueva.id_evidencia,
         id_denuncia=nueva.id_denuncia,
-        lat=evidencia.lat,
-        lon=evidencia.lon,
+        coordenadas=json.loads(coords_json),
         descripcion=nueva.descripcion,
         foto_url=nueva.foto_url
     )
 
-@router.get("/", response_model=List[EvidenciaResponse], dependencies=[Depends(verificar_token)])
+@router.get("/", response_model=List[EvidenciaResponseGeoJSON], dependencies=[Depends(verificar_token)])
 def listar_evidencias(db: Session = Depends(get_db)):
     evidencias = db.query(Evidencia).all()
     resultado = []
     for e in evidencias:
-        coords = db.execute(e.coordenadas.ST_AsText()).scalar()
-        if coords:
-            # WKT: POINT(lon lat)
-            _, lonlat = coords.split("(")
-            lon, lat = map(float, lonlat.strip(")").split())
-            resultado.append(EvidenciaResponse(
-                id_evidencia=e.id_evidencia,
-                id_denuncia=e.id_denuncia,
-                lon=lon,
-                lat=lat,
-                descripcion=e.descripcion,
-                foto_url=e.foto_url
-            ))
+        coords_json = db.execute(
+            text("SELECT ST_AsGeoJSON(coordenadas) FROM evidencias WHERE id_evidencia = :id"),
+            {"id": e.id_evidencia}
+        ).scalar()
+        resultado.append(EvidenciaResponseGeoJSON(
+            id_evidencia=e.id_evidencia,
+            id_denuncia=e.id_denuncia,
+            coordenadas=json.loads(coords_json),
+            descripcion=e.descripcion,
+            foto_url=e.foto_url
+        ))
     return resultado
