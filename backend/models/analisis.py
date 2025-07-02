@@ -11,7 +11,7 @@ class AnalisisDenuncia(Base):
     distancia_buffer = Column(Numeric, nullable=False)
     metodo = Column(Text)
     observaciones = Column(Text)
-    buffer_geom = Column(Geometry(geometry_type="POLYGON", srid=4326))
+    buffer_geom = Column(Geometry(geometry_type="MULTIPOLYGON", srid=4326))
 
 class ResultadoAnalisis(Base):
     __tablename__ = "resultado_analisis"

@@ -44,7 +44,7 @@ CREATE TABLE concesiones (
     tipo TEXT,
     nombre TEXT,
     region TEXT,
-    geom GEOMETRY(Polygon, 4326) NOT NULL
+    geom GEOMETRY(MultiPolygon, 4326) NOT NULL
 );
 
 -- 6. Análisis ejecutado sobre una denuncia
@@ -54,8 +54,8 @@ CREATE TABLE analisis_denuncia (
     fecha_analisis TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     distancia_buffer NUMERIC NOT NULL,
     metodo TEXT,
-    observaciones TEXT
-    buffer_geom GEOMETRY(Polygon, 4326)
+    observaciones TEXT,
+    buffer_geom GEOMETRY(MultiPolygon, 4326)
 );
 
 -- 7. Resultado del análisis: concesiones intersectadas

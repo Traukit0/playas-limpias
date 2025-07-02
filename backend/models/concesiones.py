@@ -10,4 +10,4 @@ class Concesion(Base):
     tipo = Column(Text)
     nombre = Column(Text)
     region = Column(Text)
-    geom = Column(Geometry(geometry_type="POLYGON", srid=4326), nullable=False)
+    geom = Column(Geometry(geometry_type="MULTIPOLYGON", srid=4326), nullable=False)
