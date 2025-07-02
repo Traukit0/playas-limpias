@@ -4,13 +4,13 @@ from sqlalchemy.orm import Session
 def generar_buffer_union(db: Session, id_denuncia: int, radio_metros: float):
     """
     Genera un buffer unificado alrededor de todos los puntos GPS asociados a una denuncia.
-    - Transforma los puntos a EPSG:3857 para usar metros como unidad.
+    - Transforma los puntos a EPSG:32718 para usar metros como unidad.
     - Aplica ST_Buffer individual a cada punto y los une con ST_Union.
     - Devuelve el buffer como geometría transformada a EPSG:4326.
     """
     sql = text("""
         WITH puntos AS (
-            SELECT ST_Transform(coordenadas, 3857) AS geom
+            SELECT ST_Transform(coordenadas, 32718) AS geom
             FROM evidencias
             WHERE id_denuncia = :id_denuncia
         ),
