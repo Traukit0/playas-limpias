@@ -40,6 +40,7 @@ CREATE TABLE evidencias (
 -- 5. Concesiones (centros de cultivo)
 CREATE TABLE concesiones (
     id_concesion SERIAL PRIMARY KEY,
+    codigo_centro INTEGER NOT NULL,
     titular TEXT NOT NULL,
     tipo TEXT,
     nombre TEXT,
