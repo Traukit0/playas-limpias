@@ -6,6 +6,7 @@ class Concesion(Base):
     __tablename__ = "concesiones"
 
     id_concesion = Column(Integer, primary_key=True, index=True)
+    codigo_centro = Column(Integer, nullable=False)
     titular = Column(Text, nullable=False)
     tipo = Column(Text)
     nombre = Column(Text)

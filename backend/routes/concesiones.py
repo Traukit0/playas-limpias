@@ -22,6 +22,7 @@ def listar_concesiones(db: Session = Depends(get_db)):
     rows = db.execute(text("""
         SELECT
             id_concesion,
+            codigo_centro,
             titular,
             tipo,
             nombre,
@@ -34,6 +35,7 @@ def listar_concesiones(db: Session = Depends(get_db)):
     for row in rows:
         resultado.append(ConcesionResponseGeoJSON(
             id_concesion=row.id_concesion,
+            codigo_centro=row.codigo_centro,
             titular=row.titular,
             tipo=row.tipo,
             nombre=row.nombre,
