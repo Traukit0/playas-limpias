@@ -55,6 +55,7 @@ CREATE TABLE analisis_denuncia (
     distancia_buffer NUMERIC NOT NULL,
     metodo TEXT,
     observaciones TEXT
+    buffer_geom GEOMETRY(Polygon, 4326)
 );
 
 -- 7. Resultado del análisis: concesiones intersectadas
