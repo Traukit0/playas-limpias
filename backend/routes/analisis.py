@@ -39,6 +39,7 @@ def ejecutar_analisis(data: AnalisisCreate, db: Session = Depends(get_db)):
 
     # Generar buffer y obtener intersecciones
     buffer_geom = generar_buffer_union(db, data.id_denuncia, data.distancia_buffer)
+    nuevo_analisis.buffer_geom = buffer_geom
     intersecciones = intersectar_concesiones(db, buffer_geom)
 
     resultados = []
