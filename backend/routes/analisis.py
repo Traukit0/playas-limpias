@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from db import SessionLocal
 from models.analisis import AnalisisDenuncia, ResultadoAnalisis
 from models.denuncias import Denuncia
@@ -58,6 +59,11 @@ def ejecutar_analisis(data: AnalisisCreate, db: Session = Depends(get_db)):
         ))
 
     db.commit()
+    # Obtener el WKT del buffer_geom desde la BD
+    buffer_text = db.execute(
+        text("SELECT ST_AsText(buffer_geom) FROM analisis_denuncia WHERE id_analisis = :id"),
+        {"id": nuevo_analisis.id_analisis}
+    ).scalar()
 
     return AnalisisResponse(
         id_analisis=nuevo_analisis.id_analisis,
@@ -66,5 +72,6 @@ def ejecutar_analisis(data: AnalisisCreate, db: Session = Depends(get_db)):
         distancia_buffer=nuevo_analisis.distancia_buffer,
         metodo=nuevo_analisis.metodo,
         observaciones=nuevo_analisis.observaciones,
-        resultados=resultados
+        resultados=resultados,
+        buffer_wkt=buffer_text
     )

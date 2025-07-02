@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
+from shapely import wkt
 
 class AnalisisCreate(BaseModel):
     id_denuncia: int
@@ -21,6 +22,7 @@ class AnalisisResponse(BaseModel):
     metodo: Optional[str]
     observaciones: Optional[str]
     resultados: List[ResultadoAnalisisResponse]
+    buffer_wkt: Optional[str] = None
 
     class Config:
         orm_mode = True
