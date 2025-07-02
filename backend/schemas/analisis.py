@@ -1,7 +1,6 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
-from shapely import wkt
 
 class AnalisisCreate(BaseModel):
     id_denuncia: int
@@ -14,7 +13,7 @@ class ResultadoAnalisisResponse(BaseModel):
     interseccion_valida: bool
     distancia_minima: Optional[float]
 
-class AnalisisResponse(BaseModel):
+class AnalisisResponseGeoJSON(BaseModel):
     id_analisis: int
     id_denuncia: int
     fecha_analisis: Optional[datetime]
@@ -22,7 +21,7 @@ class AnalisisResponse(BaseModel):
     metodo: Optional[str]
     observaciones: Optional[str]
     resultados: List[ResultadoAnalisisResponse]
-    buffer_wkt: Optional[str] = None
+    buffer_geom: Optional[Dict[str, Any]] = None
 
     class Config:
         orm_mode = True
