@@ -4,7 +4,7 @@ from sqlalchemy import text
 from db import SessionLocal
 from models.analisis import AnalisisDenuncia, ResultadoAnalisis
 from models.denuncias import Denuncia
-from schemas.analisis import AnalisisCreate, AnalisisResponseGeoJSON, ResultadoAnalisisResponse
+from schemas.analisis import AnalisisCreate, AnalisisResponseGeoJSON, ResultadoAnalisisResponse, AnalisisPreviewRequest, AnalisisPreviewResponse, ResultadoAnalisisResponse
 from security.auth import verificar_token
 from services.geoprocessing.buffer import generar_buffer_union
 from services.geoprocessing.interseccion import intersectar_concesiones
@@ -75,4 +75,35 @@ def ejecutar_analisis(data: AnalisisCreate, db: Session = Depends(get_db)):
         observaciones=nuevo_analisis.observaciones,
         resultados=resultados,
         buffer_geom=json.loads(buffer_geojson)
+    )
+
+@router.post("/preview", response_model=AnalisisPreviewResponse, dependencies=[Depends(verificar_token)])
+def previsualizar_analisis(data: AnalisisPreviewRequest, db: Session = Depends(get_db)):
+    """
+    Devuelve una previsualización del buffer y las concesiones intersectadas sin guardar en la base de datos.
+    """
+    denuncia = db.query(Denuncia).filter(Denuncia.id_denuncia == data.id_denuncia).first()
+    if not denuncia:
+        raise HTTPException(status_code=404, detail="Denuncia no encontrada")
+
+    buffer_geom = generar_buffer_union(db, data.id_denuncia, data.distancia_buffer)
+    intersecciones = intersectar_concesiones(db, buffer_geom)
+
+    buffer_geojson = db.execute(
+        text("SELECT ST_AsGeoJSON(:geom)"),
+        {"geom": buffer_geom}
+    ).scalar()
+
+    resultados = [
+        ResultadoAnalisisResponse(
+            id_concesion=r.id_concesion,
+            interseccion_valida=r.interseccion_valida,
+            distancia_minima=r.distancia_minima
+        )
+        for r in intersecciones
+    ]
+
+    return AnalisisPreviewResponse(
+        buffer_geom=json.loads(buffer_geojson),
+        resultados=resultados
     )

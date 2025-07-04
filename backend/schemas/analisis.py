@@ -25,3 +25,11 @@ class AnalisisResponseGeoJSON(BaseModel):
 
     class Config:
         orm_mode = True
+
+class AnalisisPreviewRequest(BaseModel):
+    id_denuncia: int
+    distancia_buffer: float
+
+class AnalisisPreviewResponse(BaseModel):
+    buffer_geom: dict  # GeoJSON Polygon
+    resultados: List[ResultadoAnalisisResponse]
