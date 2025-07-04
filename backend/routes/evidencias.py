@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from db import SessionLocal
@@ -10,6 +10,7 @@ from shapely.geometry import shape
 from security.auth import verificar_token
 from typing import List
 import json
+from services.geoprocessing.gpx import procesar_gpx_waypoints
 
 router = APIRouter()
 
@@ -67,4 +68,15 @@ def listar_evidencias(db: Session = Depends(get_db)):
             descripcion=e.descripcion,
             foto_url=e.foto_url
         ))
+    return resultado
+
+@router.post("/upload_gpx", dependencies=[Depends(verificar_token)])
+def subir_archivo_gpx(id_denuncia: int, archivo_gpx: UploadFile = File(...), db: Session = Depends(get_db)):
+    """
+    Sube un archivo GPX (waypoints) y los almacena como evidencias georreferenciadas.
+    """
+    if not archivo_gpx.filename.endswith(".gpx"):
+        raise HTTPException(status_code=400, detail="El archivo debe tener extensión .gpx")
+
+    resultado = procesar_gpx_waypoints(archivo_gpx, id_denuncia, db)
     return resultado
