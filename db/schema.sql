@@ -67,3 +67,10 @@ CREATE TABLE resultado_analisis (
     interseccion_valida BOOLEAN,
     distancia_minima NUMERIC
 );
+
+-- 8. Geometría región de los lagos para procesamiento buffers|
+CREATE TABLE los_lagos (
+    id SERIAL PRIMARY KEY,
+    geom GEOMETRY(MultiPolygon, 4326),
+    fid INTEGER
+);
