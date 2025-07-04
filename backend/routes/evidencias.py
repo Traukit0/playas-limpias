@@ -10,7 +10,7 @@ from shapely.geometry import shape
 from security.auth import verificar_token
 from typing import List
 import json
-from services.geoprocessing.gpx import procesar_gpx_waypoints
+from services.geoprocessing.gpx.gpx_parser import procesar_gpx_waypoints
 
 router = APIRouter()
 
