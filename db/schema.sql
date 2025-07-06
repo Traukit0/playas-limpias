@@ -33,6 +33,8 @@ CREATE TABLE evidencias (
     id_evidencia SERIAL PRIMARY KEY,
     id_denuncia INTEGER REFERENCES denuncias(id_denuncia),
     coordenadas GEOMETRY(Point, 4326) NOT NULL,
+    fecha DATE NOT NULL,
+    hora TIME NOT NULL,
     descripcion TEXT,
     foto_url TEXT
 );
