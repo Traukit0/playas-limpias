@@ -32,6 +32,8 @@ def crear_evidencia(evidencia: EvidenciaCreateGeoJSON, db: Session = Depends(get
     nueva = Evidencia(
         id_denuncia=evidencia.id_denuncia,
         coordenadas=punto,
+        fecha=evidencia.fecha,
+        hora=evidencia.hora,
         descripcion=evidencia.descripcion,
         foto_url=evidencia.foto_url
     )
@@ -48,6 +50,8 @@ def crear_evidencia(evidencia: EvidenciaCreateGeoJSON, db: Session = Depends(get
         id_evidencia=nueva.id_evidencia,
         id_denuncia=nueva.id_denuncia,
         coordenadas=json.loads(coords_json),
+        fecha=nueva.fecha,
+        hora=nueva.hora,
         descripcion=nueva.descripcion,
         foto_url=nueva.foto_url
     )
@@ -65,6 +69,8 @@ def listar_evidencias(db: Session = Depends(get_db)):
             id_evidencia=e.id_evidencia,
             id_denuncia=e.id_denuncia,
             coordenadas=json.loads(coords_json),
+            fecha=e.fecha,
+            hora=e.hora,
             descripcion=e.descripcion,
             foto_url=e.foto_url
         ))
@@ -74,7 +80,14 @@ def listar_evidencias(db: Session = Depends(get_db)):
 def subir_archivo_gpx(id_denuncia: int, archivo_gpx: UploadFile = File(...), db: Session = Depends(get_db)):
     """
     Sube un archivo GPX (waypoints) y los almacena como evidencias georreferenciadas.
+    Cada waypoint incluye fecha y hora extraídas del timestamp del archivo GPX.
     """
+    # Validar que la denuncia existe
+    denuncia = db.query(Denuncia).filter(Denuncia.id_denuncia == id_denuncia).first()
+    if not denuncia:
+        raise HTTPException(status_code=404, detail="Denuncia no encontrada")
+    
+    # Validar extensión del archivo
     if not archivo_gpx.filename.endswith(".gpx"):
         raise HTTPException(status_code=400, detail="El archivo debe tener extensión .gpx")
 

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, Text
+from sqlalchemy import Column, Integer, ForeignKey, Text, Date, Time
 from geoalchemy2 import Geometry
 from db import Base
 
@@ -10,3 +10,5 @@ class Evidencia(Base):
     coordenadas = Column(Geometry(geometry_type="POINT", srid=4326), nullable=False)
     descripcion = Column(Text)
     foto_url = Column(Text)
+    fecha = Column(Date, nullable=False)
+    hora = Column(Time, nullable=False)

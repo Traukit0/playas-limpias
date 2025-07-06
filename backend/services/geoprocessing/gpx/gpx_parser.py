@@ -22,9 +22,15 @@ def procesar_gpx_waypoints(gpx_file: UploadFile, id_denuncia: int, db: Session):
 
         punto = from_shape(Point(lon, lat), srid=4326)
 
+        # Extraer fecha y hora del waypoint
+        fecha = tiempo.date() if tiempo else datetime.date.today()
+        hora = tiempo.time() if tiempo else datetime.time(0, 0, 0)
+
         evidencia = Evidencia(
             id_denuncia=id_denuncia,
             coordenadas=punto,
+            fecha=fecha,
+            hora=hora,
             descripcion=descripcion,
             foto_url=None  # se asignará después si corresponde
         )
