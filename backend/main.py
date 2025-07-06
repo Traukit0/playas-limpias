@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from routes import usuarios, denuncias, evidencias, concesiones, analisis, estados
+import os
 
 app = FastAPI()
 
@@ -12,6 +14,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Montar archivos estáticos para las fotos
+if os.path.exists("fotos"):
+    app.mount("/fotos", StaticFiles(directory="fotos"), name="fotos")
 
 # Incluir rutas
 app.include_router(usuarios.router, prefix="/usuarios", tags=["Usuarios"])

@@ -4,15 +4,17 @@ from sqlalchemy import text
 from db import SessionLocal
 from models.evidencias import Evidencia
 from models.denuncias import Denuncia
-from schemas.evidencias import EvidenciaCreateGeoJSON, EvidenciaResponseGeoJSON
+from schemas.evidencias import EvidenciaCreateGeoJSON, EvidenciaResponseGeoJSON, SubidaFotosResponse, ListaFotosResponse, FotoInfo
 from geoalchemy2.shape import from_shape
 from shapely.geometry import shape
 from security.auth import verificar_token
+from services.foto_service import FotoService
 from typing import List
 import json
 from services.geoprocessing.gpx.gpx_parser import procesar_gpx_waypoints
 
 router = APIRouter()
+foto_service = FotoService()
 
 def get_db():
     db = SessionLocal()
@@ -93,3 +95,43 @@ def subir_archivo_gpx(id_denuncia: int, archivo_gpx: UploadFile = File(...), db:
 
     resultado = procesar_gpx_waypoints(archivo_gpx, id_denuncia, db)
     return resultado
+
+@router.post("/upload_fotos/{id_denuncia}", response_model=SubidaFotosResponse, dependencies=[Depends(verificar_token)])
+def subir_fotos_denuncia(
+    id_denuncia: int, 
+    archivos: List[UploadFile] = File(...), 
+    db: Session = Depends(get_db)
+):
+    """
+    Sube múltiples fotos para una denuncia y las asocia automáticamente a evidencias GPS por timestamp EXIF.
+    
+    Requisitos:
+    - La denuncia debe existir
+    - Debe haber evidencias GPS (archivo GPX ya procesado)
+    - Las fotos deben tener formato JPG o PNG
+    - Las fotos se comprimirán automáticamente a 1920x1080
+    - Se asociarán por timestamp EXIF a la evidencia GPS más cercana en tiempo
+    """
+    resultado = foto_service.subir_fotos_denuncia(db, id_denuncia, archivos)
+    return SubidaFotosResponse(**resultado)
+
+@router.get("/fotos/{id_denuncia}", response_model=ListaFotosResponse, dependencies=[Depends(verificar_token)])
+def listar_fotos_denuncia(id_denuncia: int, db: Session = Depends(get_db)):
+    """
+    Lista todas las fotos asociadas a una denuncia específica.
+    
+    Retorna:
+    - Información de cada foto (ruta, descripción, coordenadas GPS)
+    - Total de fotos encontradas
+    """
+    # Verificar que la denuncia existe
+    denuncia = db.query(Denuncia).filter(Denuncia.id_denuncia == id_denuncia).first()
+    if not denuncia:
+        raise HTTPException(status_code=404, detail="Denuncia no encontrada")
+    
+    fotos = foto_service.listar_fotos_denuncia(db, id_denuncia)
+    
+    return ListaFotosResponse(
+        fotos=[FotoInfo(**foto) for foto in fotos],
+        total=len(fotos)
+    )

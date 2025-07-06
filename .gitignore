@@ -10,3 +10,5 @@ ENV/
 env.bak/
 venv.bak/
 __pycache__/
+archivos/
+backend/fotos/
