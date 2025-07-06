@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from db import SessionLocal
@@ -10,7 +10,7 @@ from shapely.geometry import shape
 from security.auth import verificar_token
 from services.foto_service import FotoService
 from typing import List
-import json
+import json as pyjson
 from services.geoprocessing.gpx.gpx_parser import procesar_gpx_waypoints
 
 router = APIRouter()
@@ -51,7 +51,7 @@ def crear_evidencia(evidencia: EvidenciaCreateGeoJSON, db: Session = Depends(get
     return EvidenciaResponseGeoJSON(
         id_evidencia=nueva.id_evidencia,
         id_denuncia=nueva.id_denuncia,
-        coordenadas=json.loads(coords_json),
+        coordenadas=pyjson.loads(coords_json),
         fecha=nueva.fecha,
         hora=nueva.hora,
         descripcion=nueva.descripcion,
@@ -70,7 +70,7 @@ def listar_evidencias(db: Session = Depends(get_db)):
         resultado.append(EvidenciaResponseGeoJSON(
             id_evidencia=e.id_evidencia,
             id_denuncia=e.id_denuncia,
-            coordenadas=json.loads(coords_json),
+            coordenadas=pyjson.loads(coords_json),
             fecha=e.fecha,
             hora=e.hora,
             descripcion=e.descripcion,
@@ -100,10 +100,17 @@ def subir_archivo_gpx(id_denuncia: int, archivo_gpx: UploadFile = File(...), db:
 def subir_fotos_denuncia(
     id_denuncia: int, 
     archivos: List[UploadFile] = File(...), 
+    descripciones: List[str] = Form(...),
     db: Session = Depends(get_db)
 ):
     """
     Sube múltiples fotos para una denuncia y las asocia automáticamente a evidencias GPS por timestamp EXIF.
+    Cada foto debe tener una descripción individual (campo 'descripciones').
+    
+    Ejemplo en Swagger:
+    - NOTA: NO ES FUNCIONAL EN SWAGGER, SE DEBE EJECUTAR DESDE POSTMAN!!! ACÁ NO FUNCIONARÁ POR LA VESIÓN DE SWAGGER!!
+    - archivos: [foto1.jpg, foto2.jpg]
+    - descripciones: ["Descripción 1", "Descripción 2"]
     
     Requisitos:
     - La denuncia debe existir
@@ -111,8 +118,29 @@ def subir_fotos_denuncia(
     - Las fotos deben tener formato JPG o PNG
     - Las fotos se comprimirán automáticamente a 1920x1080
     - Se asociarán por timestamp EXIF a la evidencia GPS más cercana en tiempo
+    - Cada foto debe tener una descripción
     """
-    resultado = foto_service.subir_fotos_denuncia(db, id_denuncia, archivos)
+    # Validación robusta para evitar problemas futuros con el frontend
+    # Si descripciones llega como un solo string (por error del cliente), intentar decodificar como JSON o dividir solo por saltos de línea
+    if len(descripciones) == 1 and len(archivos) > 1:
+        desc = descripciones[0]
+        # Intentar JSON
+        try:
+            posibles = pyjson.loads(desc)
+            if isinstance(posibles, list) and len(posibles) == len(archivos):
+                descripciones = posibles
+            else:
+                raise ValueError
+        except Exception:
+            # Intentar dividir solo por saltos de línea (lo que Swagger/FastAPI suelen hacer)
+            posibles = [d for d in desc.split('\n') if d.strip()]
+            if len(posibles) == len(archivos):
+                descripciones = posibles
+            else:
+                raise HTTPException(status_code=400, detail="El campo 'descripciones' debe ser un array real o un string separado por saltos de línea (uno por foto). No se aceptan separadores por comas. Si usas Swagger, agrega cada comentario como un campo individual o separa por salto de línea.")
+    if len(archivos) != len(descripciones):
+        raise HTTPException(status_code=400, detail="Debe enviar una descripción por cada foto (campos 'descripciones' y 'archivos' deben tener la misma cantidad de elementos).")
+    resultado = foto_service.subir_fotos_denuncia(db, id_denuncia, archivos, descripciones)
     return SubidaFotosResponse(**resultado)
 
 @router.get("/fotos/{id_denuncia}", response_model=ListaFotosResponse, dependencies=[Depends(verificar_token)])

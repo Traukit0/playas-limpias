@@ -107,102 +107,75 @@ class FotoService:
             print(f"Error al extraer EXIF: {e}")
             return datetime.now()
     
-    def asociar_foto_a_evidencia(self, db: Session, id_denuncia: int, ruta_foto: str, 
-                                timestamp_foto: datetime) -> Optional[int]:
+    def asociar_foto_a_evidencia(self, db: Session, id_denuncia: int, ruta_foto: str, timestamp_foto: datetime, descripcion: str) -> Optional[int]:
         """
-        Asocia una foto a la evidencia más cercana en tiempo
-        Retorna el id_evidencia si encuentra coincidencia, None si no
+        Asocia una foto a la evidencia más cercana en tiempo y guarda la descripción proporcionada por el usuario.
         """
-        # Buscar evidencias de la denuncia
         evidencias = db.query(Evidencia).filter(
             Evidencia.id_denuncia == id_denuncia
         ).all()
-        
         if not evidencias:
             return None
-        
-        # Encontrar la evidencia más cercana en tiempo
         evidencia_cercana = None
-        diferencia_minima = timedelta(hours=24)  # Tolerancia de 24 horas
-        
+        diferencia_minima = timedelta(hours=24)
         for evidencia in evidencias:
-            # Combinar fecha y hora de la evidencia
             timestamp_evidencia = datetime.combine(evidencia.fecha, evidencia.hora)
-            
-            # Calcular diferencia absoluta
             diferencia = abs(timestamp_foto - timestamp_evidencia)
-            
             if diferencia < diferencia_minima:
                 diferencia_minima = diferencia
                 evidencia_cercana = evidencia
-        
         if evidencia_cercana:
-            # Actualizar la evidencia con la foto
             evidencia_cercana.foto_url = ruta_foto
-            evidencia_cercana.descripcion = f"Foto asociada por timestamp: {timestamp_foto.strftime('%Y-%m-%d %H:%M:%S')}"
+            evidencia_cercana.descripcion = descripcion
             db.commit()
             return evidencia_cercana.id_evidencia
-        
         return None
-    
-    def subir_fotos_denuncia(self, db: Session, id_denuncia: int, 
-                           archivos: List[UploadFile]) -> dict:
+
+    def subir_fotos_denuncia(self, db: Session, id_denuncia: int, archivos: List[UploadFile], descripciones: List[str]) -> dict:
         """
-        Sube múltiples fotos para una denuncia y las asocia a evidencias por timestamp
+        Sube múltiples fotos para una denuncia y las asocia a evidencias por timestamp y descripción del usuario
         """
-        # Verificar que la denuncia existe
         denuncia = db.query(Denuncia).filter(Denuncia.id_denuncia == id_denuncia).first()
         if not denuncia:
             raise HTTPException(status_code=404, detail="Denuncia no encontrada")
-        
-        # Verificar que hay evidencias (GPX ya procesado)
         evidencias = db.query(Evidencia).filter(Evidencia.id_denuncia == id_denuncia).count()
         if evidencias == 0:
             raise HTTPException(
                 status_code=400, 
                 detail="No hay evidencias GPS para esta denuncia. Debe subir el archivo GPX primero."
             )
-        
-        # Crear carpeta para la denuncia
+        if len(archivos) != len(descripciones):
+            raise HTTPException(status_code=400, detail="Debe enviar una descripción por cada foto.")
         carpeta_denuncia = self.crear_carpeta_denuncia(id_denuncia)
-        
         resultados = {
             "fotos_procesadas": 0,
             "fotos_asociadas": 0,
             "errores": [],
             "detalles": []
         }
-        
-        for archivo in archivos:
+        for archivo, descripcion in zip(archivos, descripciones):
             try:
-                # Validar archivo
                 if not self.validar_archivo(archivo):
                     resultados["errores"].append(f"Archivo inválido: {archivo.filename}")
                     continue
-                
-                # Procesar imagen (ahora pasando id_denuncia)
                 ruta_foto, timestamp_foto = self.procesar_imagen(archivo, carpeta_denuncia, id_denuncia)
                 resultados["fotos_procesadas"] += 1
-                
-                # Asociar a evidencia
-                id_evidencia = self.asociar_foto_a_evidencia(db, id_denuncia, ruta_foto, timestamp_foto)
-                
+                id_evidencia = self.asociar_foto_a_evidencia(db, id_denuncia, ruta_foto, timestamp_foto, descripcion)
                 if id_evidencia:
                     resultados["fotos_asociadas"] += 1
                     resultados["detalles"].append({
                         "archivo": archivo.filename,
                         "evidencia_id": id_evidencia,
                         "timestamp_foto": timestamp_foto.isoformat(),
-                        "ruta": ruta_foto
+                        "ruta": ruta_foto,
+                        "descripcion": descripcion
                     })
                 else:
                     resultados["errores"].append(
                         f"No se pudo asociar {archivo.filename} a ninguna evidencia GPS"
                     )
-                    
             except Exception as e:
                 resultados["errores"].append(f"Error procesando {archivo.filename}: {str(e)}")
-        
         return resultados
     
     def listar_fotos_denuncia(self, db: Session, id_denuncia: int) -> List[dict]:
