@@ -22,7 +22,11 @@ def crear_denuncia(denuncia: DenunciaCreate, db: Session = Depends(get_db)):
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    nueva = Denuncia(**denuncia.dict())
+    denuncia_data = denuncia.dict()
+    if denuncia_data.get('fecha_ingreso') is None:
+        denuncia_data.pop('fecha_ingreso', None)
+    
+    nueva = Denuncia(**denuncia_data)
     db.add(nueva)
     db.commit()
     db.refresh(nueva)

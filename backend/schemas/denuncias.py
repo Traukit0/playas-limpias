@@ -6,6 +6,7 @@ class DenunciaBase(BaseModel):
     id_usuario: int
     id_estado: Optional[int] = None
     fecha_inspeccion: datetime
+    fecha_ingreso: Optional[datetime] = None
     lugar: Optional[str] = None
     observaciones: Optional[str] = None
 
