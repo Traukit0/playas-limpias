@@ -39,7 +39,7 @@ class FotoService:
             
         return True
     
-    def procesar_imagen(self, archivo: UploadFile, carpeta_destino: str) -> Tuple[str, datetime]:
+    def procesar_imagen(self, archivo: UploadFile, carpeta_destino: str, id_denuncia: int) -> Tuple[str, datetime]:
         """
         Procesa una imagen: la comprime, guarda y extrae timestamp EXIF
         Retorna: (ruta_relativa, timestamp_foto)
@@ -55,7 +55,7 @@ class FotoService:
         
         nombre_final = f"{nombre_original}_{timestamp}{extension}"
         ruta_completa = os.path.join(carpeta_destino, nombre_final)
-        ruta_relativa = f"/fotos/denuncia_{os.path.basename(carpeta_destino)}/{nombre_final}"
+        ruta_relativa = f"/fotos/denuncia_{id_denuncia}/{nombre_final}"
         
         # Leer y procesar imagen
         imagen = Image.open(archivo.file)
@@ -180,8 +180,8 @@ class FotoService:
                     resultados["errores"].append(f"Archivo inválido: {archivo.filename}")
                     continue
                 
-                # Procesar imagen
-                ruta_foto, timestamp_foto = self.procesar_imagen(archivo, carpeta_denuncia)
+                # Procesar imagen (ahora pasando id_denuncia)
+                ruta_foto, timestamp_foto = self.procesar_imagen(archivo, carpeta_denuncia, id_denuncia)
                 resultados["fotos_procesadas"] += 1
                 
                 # Asociar a evidencia
