@@ -18,7 +18,7 @@ def procesar_gpx_waypoints(gpx_file: UploadFile, id_denuncia: int, db: Session):
         lat, lon = wpt.latitude, wpt.longitude
         tiempo = wpt.time  # datetime.datetime
         nombre = wpt.name if wpt.name else "Waypoint"
-        descripcion = f"{nombre} - {tiempo.isoformat()}" if tiempo else nombre
+        descripcion = None
 
         punto = from_shape(Point(lon, lat), srid=4326)
 
