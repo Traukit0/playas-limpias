@@ -6,9 +6,10 @@ from shapely.geometry import Point
 import gpxpy
 import datetime
 
-def procesar_gpx_waypoints(gpx_file: UploadFile, id_denuncia: int, db: Session):
+def procesar_gpx_waypoints(gpx_file: UploadFile, id_denuncia: int, db: Session, utc_offset: int):
     """
     Parsea un archivo GPX (solo waypoints) y los guarda como evidencias georreferenciadas en la BD.
+    Ajusta la hora de cada waypoint según el utc_offset proporcionado.
     """
     contenido = gpx_file.file.read().decode("utf-8")
     gpx = gpxpy.parse(contenido)
@@ -22,9 +23,14 @@ def procesar_gpx_waypoints(gpx_file: UploadFile, id_denuncia: int, db: Session):
 
         punto = from_shape(Point(lon, lat), srid=4326)
 
-        # Extraer fecha y hora del waypoint
-        fecha = tiempo.date() if tiempo else datetime.date.today()
-        hora = tiempo.time() if tiempo else datetime.time(0, 0, 0)
+        # Extraer fecha y hora del waypoint y ajustar por utc_offset
+        if tiempo:
+            tiempo_ajustado = tiempo + datetime.timedelta(hours=utc_offset)
+            fecha = tiempo_ajustado.date()
+            hora = tiempo_ajustado.time()
+        else:
+            fecha = datetime.date.today()
+            hora = datetime.time(0, 0, 0)
 
         evidencia = Evidencia(
             id_denuncia=id_denuncia,

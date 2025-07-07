@@ -79,10 +79,11 @@ def listar_evidencias(db: Session = Depends(get_db)):
     return resultado
 
 @router.post("/upload_gpx", dependencies=[Depends(verificar_token)])
-def subir_archivo_gpx(id_denuncia: int, archivo_gpx: UploadFile = File(...), db: Session = Depends(get_db)):
+def subir_archivo_gpx(id_denuncia: int, utc_offset: int = Form(...), archivo_gpx: UploadFile = File(...), db: Session = Depends(get_db)):
     """
     Sube un archivo GPX (waypoints) y los almacena como evidencias georreferenciadas.
     Cada waypoint incluye fecha y hora extraídas del timestamp del archivo GPX.
+    El parámetro utc_offset indica la diferencia horaria a aplicar a los timestamps (por ejemplo, -3 o -4).
     """
     # Validar que la denuncia existe
     denuncia = db.query(Denuncia).filter(Denuncia.id_denuncia == id_denuncia).first()
@@ -93,7 +94,7 @@ def subir_archivo_gpx(id_denuncia: int, archivo_gpx: UploadFile = File(...), db:
     if not archivo_gpx.filename.endswith(".gpx"):
         raise HTTPException(status_code=400, detail="El archivo debe tener extensión .gpx")
 
-    resultado = procesar_gpx_waypoints(archivo_gpx, id_denuncia, db)
+    resultado = procesar_gpx_waypoints(archivo_gpx, id_denuncia, db, utc_offset)
     return resultado
 
 @router.post("/upload_fotos/{id_denuncia}", response_model=SubidaFotosResponse, dependencies=[Depends(verificar_token)])
