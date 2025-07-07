@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from PIL import Image
+from PIL import Image, ExifTags
 import exifread
 from models.evidencias import Evidencia
 from models.denuncias import Denuncia
@@ -39,6 +39,28 @@ class FotoService:
             
         return True
     
+    def corregir_orientacion_exif(self, imagen: Image.Image) -> Image.Image:
+        """
+        Corrige la orientación de la imagen según la etiqueta EXIF Orientation, si existe.
+        """
+        try:
+            exif = imagen._getexif()
+            if exif is not None:
+                for tag, value in exif.items():
+                    tag_name = ExifTags.TAGS.get(tag, tag)
+                    if tag_name == 'Orientation':
+                        orientacion = value
+                        if orientacion == 3:
+                            imagen = imagen.rotate(180, expand=True)
+                        elif orientacion == 6:
+                            imagen = imagen.rotate(270, expand=True)
+                        elif orientacion == 8:
+                            imagen = imagen.rotate(90, expand=True)
+                        break
+        except Exception:
+            pass  # Si no hay EXIF o no se puede leer, no hacer nada
+        return imagen
+    
     def procesar_imagen(self, archivo: UploadFile, carpeta_destino: str, id_denuncia: int) -> Tuple[str, datetime]:
         """
         Procesa una imagen: la comprime, guarda y extrae timestamp EXIF
@@ -59,6 +81,9 @@ class FotoService:
         
         # Leer y procesar imagen
         imagen = Image.open(archivo.file)
+        
+        # Corregir orientación según EXIF antes de cualquier procesamiento
+        imagen = self.corregir_orientacion_exif(imagen)
         
         # Convertir a RGB si es necesario
         if imagen.mode in ('RGBA', 'LA', 'P'):
