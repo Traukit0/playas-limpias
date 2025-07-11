@@ -1,55 +1,28 @@
-## 🗓 Bitácora de Avance - Semana 1
 
-**Fecha:** 2025-06-23  
-**Semana:** 1 de 12  
+## 🗓 Bitácora de Avance - Sprint 2
+
+**Fecha inicio:** 2025-07-07  
+**Semanas:** 2 y 3 de 10  
 
 ---
 
 ### ✅ Actividades realizadas
 
-- Elección del stack tecnológico a utilizar y su implementación: PostgreSQL + PostGIS, despliegue en contendor local a través de [docker-compose.yml](/docker-compose.yml)
-- Definición de [esquema base de datos](/db/schema.sql).
-- Pruebas básicas de ingreso de datos a la BD para corroborar estructura de la misma.
-- Documentación técnica preliminar sobre estructura BD.
-- Creación de estructura básica inicial para el backend
-
+- Implementar pruebas funcionales de todos los endpoints del backend usando Swagger y/o Postman.
+- Ejecutar casos de prueba end-to-end (ingreso de denuncia, evidencia, análisis y consulta de resultados).
+- Validar el almacenamiento y recuperación de geometrías espaciales con evidencias y concesiones.
+- Establecer el flujo básico de trabajo completo desde `/usuarios` hasta `/analisis`.
+- Realizar mejoras menores a los esquemas y rutas si se detectan problemas en la integración de componentes.
+- Documentar observaciones de comportamiento de la API para futuras validaciones.
+- Modificado el endpoint de evidencias para incluir en cada punto gps datos de fecha y hora
+- Modificar descripcion en /evidencias para que acepte texto que viene desde foto, eliminar timestamp LISTO
+- Analizar implicancia de UTC en los puntos GPS
+- La prueba de la API para ingresar fotos y comentarios se debe ejecutar desde Postman, debido a limitaciones de Swagger con multipart/form data. Swagger insiste en enviar líneas de campos separados como un solos string separado por comas.
+- Se modifica lógica de servicio de fotos para respetar orientación / relación de aspecto
 ---
 
 ### ⚠️ Dificultades encontradas
 
-- Una opción posible fue utilizar Supabase ya que a la fecha de comienzo del proyecto consta con soporte para PostGIS. Se optó por contenedor local ya que Supabase aún carece de características avanzadas como procesamiento con GDAL.
-- Se decidió utilizar DBeaver para conectar a la base de datos del contenedor, ya que funciona en entorno Windows y Linux. 
-
----
-
-### 🔜 Acciones pendientes o planificadas
-
-- Revisar estructura BD para que cubra un caso básico a fin de poder mostrar PMV.
-
----
-
-**Observaciones adicionales:**
-> Se da inicio al proyecto creando la estructura de datos para el mismo, el diseño de la base de datos y la estructura de tablas.
-
-
-
-
-## 🗓 Bitácora de Avance - Semana 1
-
-**Fecha:** 2025-06-23  
-**Semana:** 1 de 12  
-
----
-
-### ✅ Actividades realizadas
-
-- 📦 **Elección e implementación del stack tecnológico principal**:
-  - PostgreSQL + PostGIS como motor de base de datos geoespacial.
-  - Despliegue local mediante [docker-compose.yml](/docker-compose.yml), con volúmenes persistentes para asegurar conservación de datos.
-- 🧱 **Definición y ejecución del esquema de base de datos**:
-  - Se diseñó y ejecutó el archivo [schema.sql](/db/schema.sql) que incluye las siguientes tablas: `usuarios`, `denuncias`, `evidencias`, `concesiones`, `estados_denuncia`, `analisis_denuncia` y `resultado_analisis`.
-- 🧪 **Validación de integridad del modelo de datos**:
-  - Ingreso manual de registros desde DBeaver para confirmar estructura y relaciones foráneas.
 - 🧰 **Creación del backend base**:
   - Se estableció la estructura modular del proyecto (`/models`, `/routes`, `/schemas`, `/security`, etc.).
   - Configuración de CORS y variables de entorno mediante `python-dotenv`.
@@ -61,13 +34,6 @@
   - Se garantizó funcionalidad mínima para registrar y recuperar datos relevantes asociados a denuncias ambientales y sus análisis.
 - 📋 **Documentación API generada automáticamente con Swagger (OpenAPI)**:
   - Se probaron todos los endpoints vía interfaz generada por FastAPI en `http://localhost:8000/docs`.
-
----
-
-### ⚠️ Dificultades encontradas
-
-- 💡 **Evaluación inicial de Supabase como alternativa a PostGIS**:  
-  Se descartó en esta etapa por limitaciones en procesamiento geoespacial avanzado (GDAL, análisis vectorial), a pesar de su soporte nativo para PostGIS.
 - 🖥 **Interoperabilidad entre frontend-backend con geometrías espaciales**:  
   Se identificó una dificultad clave en la manipulación de datos espaciales en la API:
   - No es posible enviar ni recibir directamente objetos `GEOMETRY(Point)` a través de JSON.
@@ -77,9 +43,14 @@
 - 🔍 **Validación de buffers y geometrías en el backend**:  
   - Al construir el endpoint de análisis (`/analisis/`), se utilizó una combinación de `ST_Union`, `ST_Buffer`, `ST_Intersects` y `ST_Distance`, que requiere transformar proyecciones (`4326` a `3857` y viceversa) para calcular distancias métricas reales.
   - Esto añadió complejidad y requirió testing adicional con datos reales.
-
 ---
 
+### 🔜 Acciones pendientes o planificadas
+
+- Iniciar implementación del módulo `/services/geoprocessing/` para encapsular lógica espacial.
+- Diseñar estructura y lógica inicial del visor frontend con React + MapLibre.
+- Comenzar pruebas de integración frontend-backend (fetch de geometrías desde `/concesiones` y `/evidencias`).
+- Iniciar documentación técnica del API (OpenAPI + manual de uso).
 ### 🔜 Acciones pendientes o planificadas
 
 - 🔄 Implementar capa de servicios (`/services/geoprocessing/`) para abstraer lógica geoespacial y separar responsabilidades del backend.
@@ -91,6 +62,4 @@
 
 ### 📌 Observaciones adicionales
 
-> Se ha completado el desarrollo del esqueleto funcional mínimo del backend, el cual permite gestionar usuarios, denuncias, evidencias georreferenciadas, centros de cultivo (concesiones) y ejecutar análisis espaciales automatizados.  
->
-> Todo lo implementado está en línea directa con los objetivos definidos en el documento del anteproyecto y el informe técnico del proyecto de título, validando la factibilidad y consistencia del enfoque propuesto.
+> En esta semana se debe consolidar la arquitectura técnica funcional del backend, asegurando que cada ruta cumpla su propósito y que el flujo completo desde ingreso hasta análisis esté operativo de forma básica, previo a su integración visual y a la adición de lógica avanzada de procesamiento espacial.

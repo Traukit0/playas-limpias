@@ -1,14 +1,13 @@
 # 📘 Bitácora de Avance del Proyecto
 
-Este documento centraliza el seguimiento del progreso del proyecto, organizado por semanas. Cada entrada contiene el detalle de las actividades realizadas, dificultades encontradas y acciones planificadas, siguiendo un enfoque ágil e iterativo.
+Este documento centraliza el seguimiento del progreso del proyecto, organizado por sprints. Cada entrada contiene el detalle de las actividades realizadas, dificultades encontradas y acciones planificadas, siguiendo un enfoque ágil e iterativo.
 
 ---
 
 ## 📁 Índice de semanas
 
-- [Semana 1 - 23 de junio](./bitacora/semana_01.md) ✅
-- [Semana 2 - 30 de junio](./bitacora/semana_02.md) ✅
-- [Semana 3 - 07 de julio](./bitacora/semana_03.md) ✅
+- [SPRINT 01 - 23/06 al 06/07](./bitacora/sprint_01.md) ✅
+- [SPRINT 02 - 07/07 al 20/07](./bitacora/sprint_02.md) ✅
 
 ---
 
