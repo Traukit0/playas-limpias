@@ -19,6 +19,7 @@
 - Analizar implicancia de UTC en los puntos GPS
 - La prueba de la API para ingresar fotos y comentarios se debe ejecutar desde Postman, debido a limitaciones de Swagger con multipart/form data. Swagger insiste en enviar líneas de campos separados como un solos string separado por comas.
 - Se modifica lógica de servicio de fotos para respetar orientación / relación de aspecto
+- Se añade funcionalidad para visualizar el buffer de intersección antes de llevar el análisis a la base de datos
 ---
 
 ### ⚠️ Dificultades encontradas
@@ -43,6 +44,7 @@
 - 🔍 **Validación de buffers y geometrías en el backend**:  
   - Al construir el endpoint de análisis (`/analisis/`), se utilizó una combinación de `ST_Union`, `ST_Buffer`, `ST_Intersects` y `ST_Distance`, que requiere transformar proyecciones (`4326` a `3857` y viceversa) para calcular distancias métricas reales.
   - Esto añadió complejidad y requirió testing adicional con datos reales.
+  - Había un problema con operación de substract en el cálculo del buffer menos la geometría de tierra. Se solucionó a fin de que el buffer devuelva solamente lo correspondiente al mar.
 ---
 
 ### 🔜 Acciones pendientes o planificadas
@@ -51,9 +53,9 @@
 - Diseñar estructura y lógica inicial del visor frontend con React + MapLibre.
 - Comenzar pruebas de integración frontend-backend (fetch de geometrías desde `/concesiones` y `/evidencias`).
 - Iniciar documentación técnica del API (OpenAPI + manual de uso).
+
 ### 🔜 Acciones pendientes o planificadas
 
-- 🔄 Implementar capa de servicios (`/services/geoprocessing/`) para abstraer lógica geoespacial y separar responsabilidades del backend.
 - 🌍 Diseñar y montar visor web que consuma los endpoints `GET /evidencias`, `GET /concesiones`, y eventualmente `GET /analisis`.
 - 📝 Generar documentación técnica y funcional de endpoints + estructura de carpetas, como base para entrega intermedia (PMV).
 - 🧪 Ejecutar pruebas de integración end-to-end (ingreso denuncia + evidencia + análisis + revisión resultados).
