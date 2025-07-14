@@ -10,5 +10,34 @@ services:
     ports:
       - "5432:5432"
 
+  backend:
+    build:
+      context: ./backend
+    container_name: playas_backend
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: playas_frontend
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
 volumes:
   pg_data:
