@@ -2,7 +2,7 @@
 ## 🗓 Bitácora de Avance - Sprint 2
 
 **Fecha inicio:** 2025-07-07  
-**Semanas:** 2 y 3 de 10  
+**Semanas:** 3 y 4 de 10  
 
 ---
 

@@ -13,9 +13,13 @@ import { StepFour } from "@/components/wizard-steps/step-four"
 import { StepFive } from "@/components/wizard-steps/step-five"
 
 export interface InspectionData {
+  id_denuncia?: number // Nuevo: se guarda tras el POST
+  id_usuario: number | null // Nuevo: para dropdown
+  id_estado: number | null // Nuevo: para dropdown
   sectorName: string
   inspectionDate: string
-  inspector: string
+  fecha_ingreso: string // Nuevo: fecha actual
+  inspector: string // (opcional, para mostrar nombre)
   observations: string
   gpxFile: File | null
   photos: File[]
@@ -33,8 +37,12 @@ const steps = [
 export function InspectionWizard() {
   const [currentStep, setCurrentStep] = useState(1)
   const [inspectionData, setInspectionData] = useState<InspectionData>({
+    id_denuncia: undefined,
+    id_usuario: null,
+    id_estado: null,
     sectorName: "",
     inspectionDate: "",
+    fecha_ingreso: new Date().toISOString(),
     inspector: "",
     observations: "",
     gpxFile: null,
@@ -63,7 +71,7 @@ export function InspectionWizard() {
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return <StepOne data={inspectionData} updateData={updateInspectionData} onNext={nextStep} />
+        return <StepOne data={inspectionData} updateData={updateInspectionData} setInspectionData={setInspectionData} onNext={nextStep} />
       case 2:
         return <StepTwo data={inspectionData} updateData={updateInspectionData} onNext={nextStep} onPrev={prevStep} />
       case 3:
