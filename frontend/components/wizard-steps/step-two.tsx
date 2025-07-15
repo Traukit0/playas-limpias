@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Upload, X, MapPin, FileText } from "lucide-react"
 import type { InspectionData } from "@/components/inspection-wizard"
 import { API_TOKEN, API_BASE_URL } from "./step-one"
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMap, LayersControl } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { LatLngBounds } from 'leaflet'
 import L from 'leaflet'
@@ -254,28 +254,41 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
         {error && <div className="text-red-600 text-sm">{error}</div>}
         {success && <div className="text-green-600 text-sm">{success}</div>}
         {evidencias.length > 0 && (
-          <div className="w-full h-[400px] my-4 rounded-lg overflow-hidden">
-            <MapContainer
-              style={{ width: "100%", height: "100%" }}
-              center={getLatLngs()[0]}
-              zoom={15}
-              scrollWheelZoom={true}
-              className="w-full h-full"
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution="&copy; OpenStreetMap contributors"
-              />
-              <FitBounds points={getLatLngs()} />
-              {getLatLngs().map((pos, idx) => (
-                <Marker key={idx} position={pos as [number, number]}>
-                  <Popup>
-                    Punto #{evidencias[idx].id_evidencia}
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
-          </div>
+          <>
+            <div className="font-semibold text-base mb-2">Previsualización de puntos cargados</div>
+            <div className="w-full h-[400px] my-4 rounded-lg overflow-hidden">
+              <MapContainer
+                style={{ width: "100%", height: "100%" }}
+                center={getLatLngs()[0]}
+                zoom={15}
+                scrollWheelZoom={true}
+                className="w-full h-full"
+              >
+                <LayersControl position="topright">
+                  <LayersControl.BaseLayer checked name="OpenStreetMap">
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution="&copy; OpenStreetMap contributors"
+                    />
+                  </LayersControl.BaseLayer>
+                  <LayersControl.BaseLayer name="Satélite (Esri)">
+                    <TileLayer
+                      url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                      attribution="Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
+                    />
+                  </LayersControl.BaseLayer>
+                </LayersControl>
+                <FitBounds points={getLatLngs()} />
+                {getLatLngs().map((pos, idx) => (
+                  <Marker key={idx} position={pos as [number, number]}>
+                    <Popup>
+                      Punto #{evidencias[idx].id_evidencia}
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+            </div>
+          </>
         )}
         <div className="flex justify-between pt-6">
           <Button variant="outline" onClick={onPrev} disabled={uploading || loading}>
