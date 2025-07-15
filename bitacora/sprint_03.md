@@ -29,4 +29,4 @@
 
 ### 📌 Observaciones adicionales
 
-> 
+> Para revisión de mejora del frontend, revisar [Modificaciones Frontend](/bitacora/sprint_03_MODIFICACIONES_FRONTEND_API.md)

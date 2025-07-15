@@ -18,6 +18,7 @@ interface StepOneProps {
 
 // TODO: Reemplazar por gestión de sesión/usuario en el futuro
 const API_TOKEN = "testtoken123"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export function StepOne({ data, updateData, setInspectionData, onNext }: StepOneProps) {
   const [formData, setFormData] = useState({
@@ -35,19 +36,38 @@ export function StepOne({ data, updateData, setInspectionData, onNext }: StepOne
 
   useEffect(() => {
     // Cargar usuarios
-    fetch("/usuarios", {
+    fetch(`${API_BASE_URL}/usuarios/`, {
       headers: { Authorization: `Bearer ${API_TOKEN}` }
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          console.error('Error cargando usuarios:', res.status, res.statusText)
+          throw new Error(`Error ${res.status}: ${res.statusText}`)
+        }
+        return res.json()
+      })
       .then(setUsuarios)
-      .catch(() => setUsuarios([]))
+      .catch((error) => {
+        console.error('Error al cargar usuarios:', error)
+        setUsuarios([])
+      })
+    
     // Cargar estados
-    fetch("/estados_denuncia/", {
+    fetch(`${API_BASE_URL}/estados_denuncia/`, {
       headers: { Authorization: `Bearer ${API_TOKEN}` }
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          console.error('Error cargando estados:', res.status, res.statusText)
+          throw new Error(`Error ${res.status}: ${res.statusText}`)
+        }
+        return res.json()
+      })
       .then(setEstados)
-      .catch(() => setEstados([]))
+      .catch((error) => {
+        console.error('Error al cargar estados:', error)
+        setEstados([])
+      })
   }, [])
 
   const handleInputChange = (field: string, value: any) => {
