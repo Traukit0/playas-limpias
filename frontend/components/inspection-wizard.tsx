@@ -24,6 +24,7 @@ export interface InspectionData {
   gpxFile: File | null
   photos: File[]
   analysisComplete: boolean
+  id_evidencias?: number[] // IDs de evidencias asociadas a la denuncia
 }
 
 const steps = [

@@ -82,7 +82,12 @@ def listar_evidencias(id_denuncia: int = Query(None), db: Session = Depends(get_
     return resultado
 
 @router.post("/upload_gpx", dependencies=[Depends(verificar_token)])
-def subir_archivo_gpx(id_denuncia: int, utc_offset: int = Form(...), archivo_gpx: UploadFile = File(...), db: Session = Depends(get_db)):
+def subir_archivo_gpx(
+    id_denuncia: int = Form(...),  # Ahora se recibe como campo de formulario
+    utc_offset: int = Form(...),
+    archivo_gpx: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
     """
     Sube un archivo GPX (waypoints) y los almacena como evidencias georreferenciadas.
     Cada waypoint incluye fecha y hora extraídas del timestamp del archivo GPX.
