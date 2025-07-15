@@ -16,9 +16,8 @@ interface StepOneProps {
   onNext: () => void
 }
 
-// TODO: Reemplazar por gestión de sesión/usuario en el futuro
-const API_TOKEN = "testtoken123"
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+export const API_TOKEN = "testtoken123"
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export function StepOne({ data, updateData, setInspectionData, onNext }: StepOneProps) {
   const [formData, setFormData] = useState({

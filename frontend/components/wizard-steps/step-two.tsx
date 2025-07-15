@@ -7,10 +7,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Upload, X, MapPin, FileText } from "lucide-react"
 import type { InspectionData } from "@/components/inspection-wizard"
+import { API_TOKEN, API_BASE_URL } from "./step-one"
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
+import { LatLngBounds } from 'leaflet'
+import L from 'leaflet'
 
-// TODO: Reemplazar por gestión de sesión/usuario en el futuro
-const API_TOKEN = "testtoken123"
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+// Configuración de iconos para Leaflet (asegura que los íconos se carguen desde /public)
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: '/marker-icon-2x.png',
+  iconUrl: '/marker-icon.png',
+  shadowUrl: '/marker-shadow.png',
+});
 
 interface StepTwoProps {
   data: InspectionData
@@ -29,6 +38,7 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [evidencias, setEvidencias] = useState<any[]>([])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -107,6 +117,14 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
       setUploaded(true)
       setWaypoints(waypointsProcesados || 0)
       setSuccess(`Archivo GPX subido y procesado correctamente. ${waypointsProcesados !== null ? `${waypointsProcesados} puntos GPS procesados.` : ''}`)
+      // Obtener evidencias asociadas a la denuncia y guardar en estado
+      const evidRes = await fetch(`${API_BASE_URL}/evidencias?id_denuncia=${data.id_denuncia}`, {
+        headers: { Authorization: `Bearer ${API_TOKEN}` }
+      })
+      if (evidRes.ok) {
+        const evidenciasData = await evidRes.json()
+        setEvidencias(evidenciasData)
+      }
     } catch (err: any) {
       setError(err.message || "Error inesperado")
     } finally {
@@ -138,6 +156,27 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Función para obtener los puntos [lat, lng] desde evidencias
+  const getLatLngs = () : [number, number][] =>
+    evidencias
+      .map(ev => {
+        const coords = ev.coordenadas
+        if (coords && coords.type === "Point" && Array.isArray(coords.coordinates)) {
+          return [coords.coordinates[1], coords.coordinates[0]] as [number, number]
+        }
+        return undefined
+      })
+      .filter((x): x is [number, number] => Array.isArray(x))
+
+  function FitBounds({ points }: { points: [number, number][] }) {
+    const map = useMap()
+    if (points.length > 0) {
+      const bounds = new LatLngBounds(points)
+      map.fitBounds(bounds, { padding: [30, 30] })
+    }
+    return null
   }
 
   return (
@@ -214,6 +253,30 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
         )}
         {error && <div className="text-red-600 text-sm">{error}</div>}
         {success && <div className="text-green-600 text-sm">{success}</div>}
+        {evidencias.length > 0 && (
+          <div className="w-full h-[400px] my-4 rounded-lg overflow-hidden">
+            <MapContainer
+              style={{ width: "100%", height: "100%" }}
+              center={getLatLngs()[0]}
+              zoom={15}
+              scrollWheelZoom={true}
+              className="w-full h-full"
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution="&copy; OpenStreetMap contributors"
+              />
+              <FitBounds points={getLatLngs()} />
+              {getLatLngs().map((pos, idx) => (
+                <Marker key={idx} position={pos as [number, number]}>
+                  <Popup>
+                    Punto #{evidencias[idx].id_evidencia}
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+          </div>
+        )}
         <div className="flex justify-between pt-6">
           <Button variant="outline" onClick={onPrev} disabled={uploading || loading}>
             Anterior
