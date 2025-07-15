@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from db import SessionLocal
@@ -59,8 +59,11 @@ def crear_evidencia(evidencia: EvidenciaCreateGeoJSON, db: Session = Depends(get
     )
 
 @router.get("/", response_model=List[EvidenciaResponseGeoJSON], dependencies=[Depends(verificar_token)])
-def listar_evidencias(db: Session = Depends(get_db)):
-    evidencias = db.query(Evidencia).all()
+def listar_evidencias(id_denuncia: int = Query(None), db: Session = Depends(get_db)):
+    if id_denuncia is not None:
+        evidencias = db.query(Evidencia).filter(Evidencia.id_denuncia == id_denuncia).all()
+    else:
+        evidencias = db.query(Evidencia).all()
     resultado = []
     for e in evidencias:
         coords_json = db.execute(
