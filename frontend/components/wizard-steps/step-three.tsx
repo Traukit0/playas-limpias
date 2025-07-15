@@ -185,26 +185,28 @@ export function StepThree({ data, updateData, onNext, onPrev }: StepThreeProps) 
                 Limpiar Todo
               </Button>
             </div>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {previews.map((preview, index) => (
-                <div key={index} className="group relative aspect-square overflow-hidden rounded-lg border">
-                  <img
-                    src={preview || "/placeholder.svg"}
-                    alt={`Foto ${index + 1}`}
-                    className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20" />
-                  <button
-                    onClick={() => removePhoto(index)}
-                    className="absolute right-2 top-2 rounded-full bg-background/80 p-1 opacity-0 transition-opacity group-hover:opacity-100"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                  <div className="absolute bottom-2 left-2 rounded bg-background/80 px-2 py-1 text-xs font-medium opacity-0 transition-opacity group-hover:opacity-100">
+                <div key={index} className="flex flex-col items-stretch bg-white rounded-xl border shadow-sm p-3 relative group transition-transform hover:scale-105">
+                  <div className="relative w-full aspect-square overflow-hidden rounded-lg mb-2">
+                    <img
+                      src={preview || "/placeholder.svg"}
+                      alt={`Foto ${index + 1}`}
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      onClick={() => removePhoto(index)}
+                      className="absolute right-2 top-2 rounded-full bg-white/80 p-1 shadow hover:bg-red-100 transition-opacity opacity-0 group-hover:opacity-100"
+                      title="Eliminar foto"
+                    >
+                      <X className="h-4 w-4 text-red-600" />
+                    </button>
+                  </div>
+                  <div className="text-xs text-center font-medium text-gray-700 mb-1 truncate">
                     {photos[index]?.name.split(".")[0]}
                   </div>
                   <textarea
-                    className="absolute bottom-2 right-2 w-5/6 rounded bg-white/80 px-2 py-1 text-xs border border-gray-300 focus:outline-none focus:ring"
+                    className="resize-none rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring w-full min-h-[48px] bg-gray-50"
                     placeholder="Comentario..."
                     value={comments[index] || ""}
                     onChange={e => handleCommentChange(index, e.target.value)}
