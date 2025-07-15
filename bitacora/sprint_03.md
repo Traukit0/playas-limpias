@@ -9,6 +9,7 @@
 ### ✅ Actividades realizadas
 
 - Modificado el .env del backend para que acepte conexión desde db (ya no es localhost)
+- Todas las rutas desde el frontend deben ser referenciando a la URL, no solamente como /denuncias. Se creó un archivo env.local para manejar la URL en desarrollo y cambiarla cuando se pase a prod.
 ---
 
 ### ⚠️ Dificultades encontradas
@@ -19,11 +20,7 @@
 ### 🔜 Acciones pendientes o planificadas
 
 - Se debe modificar a futuro la seguridad, ya que para pruebas se está utilizando un token común, hardcodeado en /frontend/wizard-steps
----
-
-### 🔜 Acciones pendientes o planificadas
-
-- 
+- A futuro se debe cambiar /frontend/env.local para que refleje el servidor donde quedará la app.
 
 ---
 

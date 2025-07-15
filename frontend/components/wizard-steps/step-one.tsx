@@ -95,7 +95,11 @@ export function StepOne({ data, updateData, setInspectionData, onNext }: StepOne
         lugar: formData.sectorName,
         observaciones: formData.observations,
       }
-      const res = await fetch("/denuncias/", {
+      
+      console.log('Enviando datos a la API:', body)
+      console.log('URL de la API:', `${API_BASE_URL}/denuncias/`)
+      
+      const res = await fetch(`${API_BASE_URL}/denuncias/`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -103,11 +107,22 @@ export function StepOne({ data, updateData, setInspectionData, onNext }: StepOne
         },
         body: JSON.stringify(body),
       })
-      if (!res.ok) throw new Error("Error al crear la inspección")
+      
+      console.log('Respuesta del servidor:', res.status, res.statusText)
+      
+      if (!res.ok) {
+        const errorText = await res.text()
+        console.error('Error response:', errorText)
+        throw new Error(`Error ${res.status}: ${res.statusText} - ${errorText}`)
+      }
+      
       const dataRes = await res.json()
+      console.log('Respuesta exitosa:', dataRes)
+      
       setInspectionData((prev: any) => ({ ...prev, ...body, id_denuncia: dataRes.id_denuncia }))
       onNext()
     } catch (e: any) {
+      console.error('Error completo:', e)
       setError(e.message || "Error desconocido")
     } finally {
       setLoading(false)
