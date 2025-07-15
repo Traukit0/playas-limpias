@@ -95,8 +95,18 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
         const errData = await uploadRes.json().catch(() => ({}))
         throw new Error(errData.detail || "Error al subir el archivo GPX")
       }
+      const resData = await uploadRes.json()
+      // Extraer número de waypoints del mensaje de detalle
+      let waypointsProcesados = null
+      if (resData && typeof resData.detalle === "string") {
+        const match = resData.detalle.match(/(\d+) waypoints procesados/)
+        if (match) {
+          waypointsProcesados = parseInt(match[1], 10)
+        }
+      }
       setUploaded(true)
-      setSuccess("Archivo GPX subido y procesado correctamente.")
+      setWaypoints(waypointsProcesados || 0)
+      setSuccess(`Archivo GPX subido y procesado correctamente. ${waypointsProcesados !== null ? `${waypointsProcesados} puntos GPS procesados.` : ''}`)
     } catch (err: any) {
       setError(err.message || "Error inesperado")
     } finally {
