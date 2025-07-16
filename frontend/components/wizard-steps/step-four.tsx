@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { MapPin, ImageIcon, FileText, Play, CheckCircle } from "lucide-react"
+import { MapPin, ImageIcon, FileText, Play, CheckCircle, User, AlertCircle } from "lucide-react"
 import { AnalysisMap } from "@/components/analysis-map"
 import type { InspectionData } from "@/components/inspection-wizard"
+import { API_TOKEN, API_BASE_URL } from "./step-one"
 
 interface StepFourProps {
   data: InspectionData
@@ -15,9 +16,75 @@ interface StepFourProps {
   onPrev: () => void
 }
 
+interface Usuario {
+  id_usuario: number
+  nombre: string
+  email: string
+}
+
+interface EstadoDenuncia {
+  id_estado: number
+  estado: string
+}
+
 export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisComplete, setAnalysisComplete] = useState(data.analysisComplete)
+  
+  // Estados para datos de usuario y estado
+  const [usuario, setUsuario] = useState<Usuario | null>(null)
+  const [estado, setEstado] = useState<EstadoDenuncia | null>(null)
+  const [loadingData, setLoadingData] = useState(true)
+  const [errorData, setErrorData] = useState<string | null>(null)
+
+  // Cargar datos de usuario y estado cuando el componente se monta
+  useEffect(() => {
+    const cargarDatos = async () => {
+      setLoadingData(true)
+      setErrorData(null)
+      
+      try {
+        // Cargar datos del usuario si existe id_usuario
+        if (data.id_usuario) {
+          const usuarioRes = await fetch(`${API_BASE_URL}/usuarios/?id_usuario=${data.id_usuario}`, {
+            headers: { Authorization: `Bearer ${API_TOKEN}` }
+          })
+          
+          if (usuarioRes.ok) {
+            const usuarios = await usuarioRes.json()
+            if (usuarios.length > 0) {
+              setUsuario(usuarios[0])
+            }
+          } else {
+            console.error('Error cargando usuario:', usuarioRes.status)
+          }
+        }
+
+        // Cargar datos del estado si existe id_estado
+        if (data.id_estado) {
+          const estadoRes = await fetch(`${API_BASE_URL}/estados_denuncia/?id_estado=${data.id_estado}`, {
+            headers: { Authorization: `Bearer ${API_TOKEN}` }
+          })
+          
+          if (estadoRes.ok) {
+            const estados = await estadoRes.json()
+            if (estados.length > 0) {
+              setEstado(estados[0])
+            }
+          } else {
+            console.error('Error cargando estado:', estadoRes.status)
+          }
+        }
+      } catch (error) {
+        console.error('Error al cargar datos:', error)
+        setErrorData('Error al cargar información de la denuncia')
+      } finally {
+        setLoadingData(false)
+      }
+    }
+
+    cargarDatos()
+  }, [data.id_usuario, data.id_estado])
 
   const handleAnalysis = () => {
     setIsAnalyzing(true)
@@ -52,9 +119,43 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
                 <span className="text-muted-foreground">Fecha:</span> {data.inspectionDate}
               </p>
               <p>
-                <span className="text-muted-foreground">Inspector:</span> {data.inspector}
+                <span className="text-muted-foreground">Inspector:</span>{" "}
+                {loadingData ? (
+                  <span className="text-muted-foreground">Cargando...</span>
+                ) : usuario ? (
+                  <span className="flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    {usuario.nombre}
+                  </span>
+                ) : (
+                  <span className="text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    No disponible
+                  </span>
+                )}
+              </p>
+              <p>
+                <span className="text-muted-foreground">Estado:</span>{" "}
+                {loadingData ? (
+                  <span className="text-muted-foreground">Cargando...</span>
+                ) : estado ? (
+                  <Badge variant="outline" className="text-xs">
+                    {estado.estado}
+                  </Badge>
+                ) : (
+                  <span className="text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    No disponible
+                  </span>
+                )}
               </p>
             </div>
+            {errorData && (
+              <div className="mt-2 text-xs text-destructive flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errorData}
+              </div>
+            )}
           </div>
 
           <div className="rounded-lg border p-4">
