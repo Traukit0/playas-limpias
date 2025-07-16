@@ -438,6 +438,14 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
                   </Marker>
                 ) : null
               )}
+              {/* Todas las concesiones (amarillo suave) */}
+              {concesiones.map(c => (
+                <GeoJSON
+                  key={`all-${c.id_concesion}`}
+                  data={c.geom}
+                  style={{ color: "#FFD600", weight: 1, fillOpacity: 0.15 }}
+                />
+              ))}
               {/* Buffer y concesiones solo si hay previewData */}
               {previewData?.buffer_geom && (
                 <GeoJSON key={previewData.distancia_buffer} data={previewData.buffer_geom} style={{ color: "blue", weight: 2, fillOpacity: 0.2 }} />
