@@ -47,6 +47,7 @@ interface Concesion {
   nombre: string
   region: string
   geom: any // GeoJSON
+  codigo_centro: string
 }
 
 interface PreviewResponse {
@@ -446,10 +447,11 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
                   style={{ color: "#FFD600", weight: 1, fillOpacity: 0.15 }}
                 />
               ))}
-              {/* Buffer y concesiones solo si hay previewData */}
+              {/* Buffer (azul) */}
               {previewData?.buffer_geom && (
                 <GeoJSON key={previewData.distancia_buffer} data={previewData.buffer_geom} style={{ color: "blue", weight: 2, fillOpacity: 0.2 }} />
               )}
+              {/* Concesiones seleccionadas (rojo) - SIEMPRE ENCIMA */}
               {previewData && concesiones.filter(c => idsConcesionesIntersectadas.includes(c.id_concesion)).map(c => (
                 <GeoJSON
                   key={c.id_concesion}
@@ -459,6 +461,7 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
                   <Popup>
                     <div>
                       <div><b>Concesión:</b> {c.nombre}</div>
+                      <div><b>Código Centro:</b> {c.codigo_centro}</div>
                       <div><b>Titular:</b> {c.titular}</div>
                       <div><b>Tipo:</b> {c.tipo}</div>
                       <div><b>Región:</b> {c.region}</div>
