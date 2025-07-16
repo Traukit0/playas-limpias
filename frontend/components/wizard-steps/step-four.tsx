@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,9 +9,10 @@ import { MapPin, ImageIcon, FileText, Play, CheckCircle, User, AlertCircle } fro
 import { AnalysisMap } from "@/components/analysis-map"
 import type { InspectionData } from "@/components/inspection-wizard"
 import { API_TOKEN, API_BASE_URL } from "./step-one"
-import { MapContainer, TileLayer, Marker, GeoJSON, Popup, useMap } from "react-leaflet"
+import { MapContainer, TileLayer, Marker, GeoJSON, Popup, useMap, Tooltip } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import { useRef } from "react"
+import L from "leaflet";
 
 interface StepFourProps {
   data: InspectionData
@@ -80,6 +82,18 @@ function FitBoundsToEvidencias({ evidencias }: { evidencias: Evidencia[] }) {
     }
   }, [evidencias, map])
   return null
+}
+
+// Función para calcular el centroide de un polígono GeoJSON
+function getPolygonCentroid(geojson: any): L.LatLng | null {
+  const layer = L.geoJSON(geojson);
+  let latlng: L.LatLng | null = null;
+  layer.eachLayer(function (l: any) {
+    if (l.getBounds) {
+      latlng = l.getBounds().getCenter();
+    }
+  });
+  return latlng;
 }
 
 export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
@@ -386,6 +400,14 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
           </div>
         </div>
 
+        {/* Observaciones */}
+        {data.observations && (
+          <div className="rounded-lg border p-4">
+            <h4 className="font-medium mb-2">Observaciones</h4>
+            <p className="text-sm text-muted-foreground">{data.observations}</p>
+          </div>
+        )}
+
         {/* Input buffer */}
         <div className="flex items-center gap-2 mb-4">
           <label htmlFor="buffer-input" className="font-medium">Distancia de buffer (m):</label>
@@ -452,34 +474,39 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
                 <GeoJSON key={previewData.distancia_buffer} data={previewData.buffer_geom} style={{ color: "blue", weight: 2, fillOpacity: 0.2 }} />
               )}
               {/* Concesiones seleccionadas (rojo) - SIEMPRE ENCIMA */}
-              {previewData && concesiones.filter(c => idsConcesionesIntersectadas.includes(c.id_concesion)).map(c => (
-                <GeoJSON
-                  key={c.id_concesion}
-                  data={c.geom}
-                  style={{ color: "red", weight: 2, fillOpacity: 0.3 }}
-                >
-                  <Popup>
-                    <div>
-                      <div><b>Concesión:</b> {c.nombre}</div>
-                      <div><b>Código Centro:</b> {c.codigo_centro}</div>
-                      <div><b>Titular:</b> {c.titular}</div>
-                      <div><b>Tipo:</b> {c.tipo}</div>
-                      <div><b>Región:</b> {c.region}</div>
-                    </div>
-                  </Popup>
-                </GeoJSON>
-              ))}
+              {previewData && concesiones.filter(c => idsConcesionesIntersectadas.includes(c.id_concesion)).map(c => {
+                const centroide = getPolygonCentroid(c.geom);
+                return (
+                  <React.Fragment key={c.id_concesion}>
+                    <GeoJSON
+                      data={c.geom}
+                      style={{ color: "red", weight: 2, fillOpacity: 0.3 }}
+                    >
+                      <Popup>
+                        <div>
+                          <div><b>Concesión:</b> {c.nombre}</div>
+                          <div><b>Código Centro:</b> {c.codigo_centro}</div>
+                          <div><b>Titular:</b> {c.titular}</div>
+                          <div><b>Tipo:</b> {c.tipo}</div>
+                          <div><b>Región:</b> {c.region}</div>
+                        </div>
+                      </Popup>
+                    </GeoJSON>
+                    {centroide && (
+                      <Marker position={centroide} icon={L.divIcon({ className: 'invisible-marker' })}>
+                        <Tooltip direction="top" permanent>
+                          <span style={{ fontWeight: "bold", color: "#B71C1C", background: "rgba(255,255,255,0.85)", padding: "2px 6px", borderRadius: 4, fontSize: 13 }}>
+                            {c.codigo_centro}
+                          </span>
+                        </Tooltip>
+                      </Marker>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </MapContainer>
           </div>
         </div>
-
-        {/* Observaciones */}
-        {data.observations && (
-          <div className="rounded-lg border p-4">
-            <h4 className="font-medium mb-2">Observaciones</h4>
-            <p className="text-sm text-muted-foreground">{data.observations}</p>
-          </div>
-        )}
 
         <div className="flex justify-between pt-6">
           <Button variant="outline" onClick={onPrev}>
