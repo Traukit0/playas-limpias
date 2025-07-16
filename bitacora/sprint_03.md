@@ -21,6 +21,7 @@
 
 - Para desplegar los puntos GPS reciién subidos la mejor opción es react-leaflet, por su ligereza y responsividad. En este punto no se utilizará MapLibre
 - Habían problemas con el gestor de dependencias npm, así que se decidió modificar todo para utilizar pnpm, que resuelve las diferencias de compatibilidad entre paquetes de mejor manera. 
+- Se debe en algún momento abordar el problema de buffer cortado en dos por geografía de tierra. Una solución posible es dejar solamente el buffer mas cercano a los puntos y descartar el otro
 ---
 
 ### 🔜 Acciones pendientes o planificadas
@@ -28,6 +29,7 @@
 - Se debe modificar a futuro la seguridad, ya que para pruebas se está utilizando un token común, hardcodeado en /frontend/wizard-steps. A este respecto, en el primer paso está la referencia al token, los otros pasos lo importan desde ahí
 - A futuro se debe cambiar /frontend/env.local para que refleje el servidor donde quedará la app.
 - El filtrado de datos implementado en el endpoint /denuncias se debe replicar en otros endpoints, a fin de tener la data filtrada en el frontend
+- Se debe implementar una lógica para que el backend responda solamente con un polígono cercano a los puntos cuando existan dos (buffers cortados por tierra)
 
 ---
 
