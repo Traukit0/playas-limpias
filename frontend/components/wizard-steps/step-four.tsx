@@ -27,6 +27,16 @@ interface EstadoDenuncia {
   estado: string
 }
 
+interface Evidencia {
+  id_evidencia: number
+  id_denuncia: number
+  coordenadas: any
+  fecha: string
+  hora: string
+  descripcion: string
+  foto_url: string | null
+}
+
 export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisComplete, setAnalysisComplete] = useState(data.analysisComplete)
@@ -34,10 +44,11 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
   // Estados para datos de usuario y estado
   const [usuario, setUsuario] = useState<Usuario | null>(null)
   const [estado, setEstado] = useState<EstadoDenuncia | null>(null)
+  const [evidencias, setEvidencias] = useState<Evidencia[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [errorData, setErrorData] = useState<string | null>(null)
 
-  // Cargar datos de usuario y estado cuando el componente se monta
+  // Cargar datos de usuario, estado y evidencias cuando el componente se monta
   useEffect(() => {
     const cargarDatos = async () => {
       setLoadingData(true)
@@ -75,6 +86,20 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
             console.error('Error cargando estado:', estadoRes.status)
           }
         }
+
+        // Cargar evidencias GPS si existe id_denuncia
+        if (data.id_denuncia) {
+          const evidenciasRes = await fetch(`${API_BASE_URL}/evidencias/?id_denuncia=${data.id_denuncia}`, {
+            headers: { Authorization: `Bearer ${API_TOKEN}` }
+          })
+          
+          if (evidenciasRes.ok) {
+            const evidenciasData = await evidenciasRes.json()
+            setEvidencias(evidenciasData)
+          } else {
+            console.error('Error cargando evidencias:', evidenciasRes.status)
+          }
+        }
       } catch (error) {
         console.error('Error al cargar datos:', error)
         setErrorData('Error al cargar información de la denuncia')
@@ -84,7 +109,7 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
     }
 
     cargarDatos()
-  }, [data.id_usuario, data.id_estado])
+  }, [data.id_usuario, data.id_estado, data.id_denuncia])
 
   const handleAnalysis = () => {
     setIsAnalyzing(true)
@@ -134,21 +159,21 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
                   </span>
                 )}
               </p>
-              <p>
-                <span className="text-muted-foreground">Estado:</span>{" "}
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">Estado:</span>
                 {loadingData ? (
-                  <span className="text-muted-foreground">Cargando...</span>
+                  <span className="text-muted-foreground text-sm">Cargando...</span>
                 ) : estado ? (
                   <Badge variant="outline" className="text-xs">
                     {estado.estado}
                   </Badge>
                 ) : (
-                  <span className="text-destructive flex items-center gap-1">
+                  <span className="text-destructive flex items-center gap-1 text-sm">
                     <AlertCircle className="h-3 w-3" />
                     No disponible
                   </span>
                 )}
-              </p>
+              </div>
             </div>
             {errorData && (
               <div className="mt-2 text-xs text-destructive flex items-center gap-1">
@@ -168,11 +193,26 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
                 <span className="text-muted-foreground">Archivo:</span> {data.gpxFile?.name}
               </p>
               <p>
-                <span className="text-muted-foreground">Waypoints:</span> {Math.floor(Math.random() * 50) + 10}
+                <span className="text-muted-foreground">Waypoints:</span>{" "}
+                {loadingData ? (
+                  <span className="text-muted-foreground">Cargando...</span>
+                ) : evidencias.length > 0 ? (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    {evidencias.length} puntos
+                  </span>
+                ) : (
+                  <span className="text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    No disponible
+                  </span>
+                )}
               </p>
-              <Badge variant="outline" className="text-xs">
-                GPX Válido
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">
+                  {loadingData ? "Verificando..." : evidencias.length > 0 ? "GPX Válido" : "Sin datos"}
+                </Badge>
+              </div>
             </div>
           </div>
 
@@ -183,15 +223,52 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
             </div>
             <div className="space-y-1 text-sm">
               <p>
-                <span className="text-muted-foreground">Total:</span> {data.photos.length} fotos
+                <span className="text-muted-foreground">Total:</span>{" "}
+                {loadingData ? (
+                  <span className="text-muted-foreground">Cargando...</span>
+                ) : data.photos && data.photos.length > 0 ? (
+                  <span className="flex items-center gap-1">
+                    <ImageIcon className="h-3 w-3" />
+                    {data.photos.length} fotos
+                  </span>
+                ) : (
+                  <span className="text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    No disponible
+                  </span>
+                )}
               </p>
               <p>
                 <span className="text-muted-foreground">Tamaño:</span>{" "}
-                {(data.photos.reduce((acc, photo) => acc + photo.size, 0) / 1024 / 1024).toFixed(1)} MB
+                {loadingData ? (
+                  <span className="text-muted-foreground">Calculando...</span>
+                ) : data.photos && data.photos.length > 0 ? (
+                  <span>
+                    {(data.photos.reduce((acc, photo) => acc + (photo.size || 0), 0) / 1024 / 1024).toFixed(1)} MB
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
+                )}
               </p>
-              <Badge variant="outline" className="text-xs">
-                Listo para análisis
-              </Badge>
+              <p>
+                <span className="text-muted-foreground">Evidencias con fotos:</span>{" "}
+                {loadingData ? (
+                  <span className="text-muted-foreground">Verificando...</span>
+                ) : evidencias.length > 0 ? (
+                  <span>
+                    {evidencias.filter(e => e.foto_url).length} de {evidencias.length}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
+                )}
+              </p>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">
+                  {loadingData ? "Verificando..." : 
+                   data.photos && data.photos.length > 0 ? "Listo para análisis" : 
+                   "Sin fotografías"}
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
@@ -226,7 +303,7 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
           <div className="rounded-lg border">
             <AnalysisMap
               sectorName={data.sectorName}
-              waypoints={Math.floor(Math.random() * 50) + 10}
+              waypoints={evidencias.length}
               photos={data.photos.length}
               isAnalyzing={isAnalyzing}
               analysisComplete={analysisComplete}
