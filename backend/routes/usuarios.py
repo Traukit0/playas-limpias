@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from db import SessionLocal
 from models.usuarios import Usuario
@@ -27,5 +27,9 @@ def crear_usuario(usuario: UsuarioCreate, db: Session = Depends(get_db)):
     return nuevo_usuario
 
 @router.get("/", response_model=List[UsuarioResponse], dependencies=[Depends(verificar_token)])
-def listar_usuarios(db: Session = Depends(get_db)):
-    return db.query(Usuario).all()
+def listar_usuarios(id_usuario: int = Query(None), db: Session = Depends(get_db)):
+    if id_usuario is not None:
+        usuarios = db.query(Usuario).filter(Usuario.id_usuario == id_usuario).all()
+    else:
+        usuarios = db.query(Usuario).all()
+    return usuarios

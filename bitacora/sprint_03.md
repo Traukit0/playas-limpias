@@ -14,6 +14,7 @@
 - Se debió modificar el endpoint /upload_gpx para que aceptase el archivo gpx desde el frontend como parte del form-data
 - Se añade react-leaflet a las librerías del proyecto, para desplegar los puntos GPS recién cargados en un mini mapa que se desplegará cuando se cargue el archivo gpx de manera exitosa en la segunda etapa del wizard.
 - Se modificó todo el Dockerfile del frontend para utilizar pnpm como gestor de paquetes y dependencias
+- Algunos endpoints se están extendiendo para que acepten parámetros de query
 ---
 
 ### ⚠️ Dificultades encontradas
