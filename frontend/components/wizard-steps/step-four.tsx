@@ -96,6 +96,26 @@ function getPolygonCentroid(geojson: any): L.LatLng | null {
   return latlng;
 }
 
+// Componente auxiliar para crear panes personalizados
+function CustomPanes() {
+  const map = useMap();
+  const panesCreated = useRef(false);
+  React.useEffect(() => {
+    if (!panesCreated.current) {
+      if (!map.getPane('bufferPane')) {
+        map.createPane('bufferPane');
+        map.getPane('bufferPane')!.style.zIndex = '410';
+      }
+      if (!map.getPane('selectedPane')) {
+        map.createPane('selectedPane');
+        map.getPane('selectedPane')!.style.zIndex = '420';
+      }
+      panesCreated.current = true;
+    }
+  }, [map]);
+  return null;
+}
+
 export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisComplete, setAnalysisComplete] = useState(data.analysisComplete)
@@ -446,6 +466,7 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
           <h4 className="text-lg font-medium">Mapa de Inspección (Previsualización)</h4>
           <div className="rounded-lg border overflow-hidden">
             <MapContainer center={centro} zoom={15} style={{ height: 400, width: "100%" }}>
+              <CustomPanes />
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               <FitBoundsToEvidencias evidencias={evidencias} />
               {/* Evidencias */}
@@ -469,11 +490,11 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
                   style={{ color: "#FFD600", weight: 1, fillOpacity: 0.15 }}
                 />
               ))}
-              {/* Buffer (azul) */}
+              {/* Buffer (azul) en su propio pane */}
               {previewData?.buffer_geom && (
-                <GeoJSON key={previewData.distancia_buffer} data={previewData.buffer_geom} style={{ color: "blue", weight: 2, fillOpacity: 0.2 }} />
+                <GeoJSON key={previewData.distancia_buffer} data={previewData.buffer_geom} style={{ color: "blue", weight: 2, fillOpacity: 0.2 }} pane="bufferPane" />
               )}
-              {/* Concesiones seleccionadas (rojo) - SIEMPRE ENCIMA */}
+              {/* Concesiones seleccionadas (rojo) en su propio pane - SIEMPRE ENCIMA */}
               {previewData && concesiones.filter(c => idsConcesionesIntersectadas.includes(c.id_concesion)).map(c => {
                 const centroide = getPolygonCentroid(c.geom);
                 return (
@@ -481,6 +502,7 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
                     <GeoJSON
                       data={c.geom}
                       style={{ color: "red", weight: 2, fillOpacity: 0.3 }}
+                      pane="selectedPane"
                     >
                       <Popup>
                         <div>
