@@ -488,7 +488,17 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
                   key={`all-${c.id_concesion}`}
                   data={c.geom}
                   style={{ color: "#FFD600", weight: 1, fillOpacity: 0.15 }}
-                />
+                >
+                  <Popup>
+                    <div>
+                      <div><b>Concesión:</b> {c.nombre}</div>
+                      <div><b>Código Centro:</b> {c.codigo_centro}</div>
+                      <div><b>Titular:</b> {c.titular}</div>
+                      <div><b>Tipo:</b> {c.tipo}</div>
+                      <div><b>Región:</b> {c.region}</div>
+                    </div>
+                  </Popup>
+                </GeoJSON>
               ))}
               {/* Buffer (azul) en su propio pane */}
               {previewData?.buffer_geom && (
