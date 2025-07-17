@@ -494,10 +494,8 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
                     </GeoJSON>
                     {centroide && (
                       <Marker position={centroide} icon={L.divIcon({ className: 'invisible-marker' })}>
-                        <Tooltip direction="top" permanent>
-                          <span style={{ fontWeight: "bold", color: "#B71C1C", background: "rgba(255,255,255,0.85)", padding: "2px 6px", borderRadius: 4, fontSize: 13 }}>
-                            {c.codigo_centro}
-                          </span>
+                        <Tooltip direction="center" permanent className="tooltip-centro">
+                          <span>{c.codigo_centro}</span>
                         </Tooltip>
                       </Marker>
                     )}

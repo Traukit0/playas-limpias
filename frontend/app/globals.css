@@ -47,6 +47,7 @@ body {
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --radius: 6px
   }
   .dark {
     --background: 0 0% 3.9%;
@@ -91,4 +92,16 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* 🎯 Estilo personalizado para tooltips de centros de cultivo */
+.leaflet-tooltip.tooltip-centro {
+  padding: 2px;
+  background: rgba(255, 255, 255, 0.85);
+  font-weight: bold;
+  font-size: 12px;
+  color: #B71C1C;
+  border: 1px solid #B71C1C;
+  box-shadow: 0 1px 3px rgba(183, 28, 28, 0.4);
+  border-radius: var(--radius);
 }
