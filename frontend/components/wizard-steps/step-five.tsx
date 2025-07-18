@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Download, FileText, Map, CheckCircle, AlertTriangle, Info, MapPin, Calendar, User, Target, Eye } from "lucide-react"
+import { Download, FileText, Map, CheckCircle, AlertTriangle, Info, MapPin, Calendar, User, Target, Eye, Loader2 } from "lucide-react"
 import { MapContainer, TileLayer, Marker, GeoJSON, Popup, useMap, Tooltip } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import L from "leaflet"
@@ -100,6 +100,12 @@ export function StepFive({ data, onPrev }: StepFiveProps) {
   const [usuario, setUsuario] = useState<Usuario | null>(null)
   const [evidencias, setEvidencias] = useState<Evidencia[]>([])
   const [loadingData, setLoadingData] = useState(true)
+  
+  // Estados para descarga de archivos
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [downloadingKmz, setDownloadingKmz] = useState(false)
+  const [errorPdf, setErrorPdf] = useState<string | null>(null)
+  const [errorKmz, setErrorKmz] = useState<string | null>(null)
 
   // Datos del análisis
   const analysisResults = data.analysisResults
@@ -154,14 +160,78 @@ export function StepFive({ data, onPrev }: StepFiveProps) {
     cargarDatos()
   }, [data.id_usuario, data.id_denuncia])
 
-  const handleDownloadPDF = () => {
-    // TODO: Implementar descarga real de PDF
-    console.log("Descargando PDF con ID análisis:", analysisResults?.id_analisis)
+  const handleDownloadPDF = async () => {
+    if (!analysisResults?.id_analisis) return
+    
+    setDownloadingPdf(true)
+    setErrorPdf(null)
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/analisis/${analysisResults.id_analisis}/pdf`, {
+        method: 'GET',
+        headers: { 
+          Authorization: `Bearer ${API_TOKEN}`,
+          'Accept': 'application/pdf'
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Error generando PDF: ${response.status} ${response.statusText}`)
+      }
+      
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `inspeccion_${data.sectorName.replace(/\s+/g, '_')}_ID${analysisResults.id_analisis}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+    } catch (error) {
+      console.error('Error descargando PDF:', error)
+      setErrorPdf(error instanceof Error ? error.message : 'Error inesperado al generar PDF')
+    } finally {
+      setDownloadingPdf(false)
+    }
   }
 
-  const handleDownloadKMZ = () => {
-    // TODO: Implementar descarga real de KMZ
-    console.log("Descargando KMZ con ID análisis:", analysisResults?.id_analisis)
+  const handleDownloadKMZ = async () => {
+    if (!analysisResults?.id_analisis) return
+    
+    setDownloadingKmz(true)
+    setErrorKmz(null)
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/analisis/${analysisResults.id_analisis}/kmz`, {
+        method: 'GET',
+        headers: { 
+          Authorization: `Bearer ${API_TOKEN}`,
+          'Accept': 'application/vnd.google-earth.kmz'
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Error generando KMZ: ${response.status} ${response.statusText}`)
+      }
+      
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `inspeccion_${data.sectorName.replace(/\s+/g, '_')}_ID${analysisResults.id_analisis}.kmz`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+    } catch (error) {
+      console.error('Error descargando KMZ:', error)
+      setErrorKmz(error instanceof Error ? error.message : 'Error inesperado al generar KMZ')
+    } finally {
+      setDownloadingKmz(false)
+    }
   }
 
   const handleViewOnMap = (concession: any) => {
@@ -564,11 +634,28 @@ export function StepFive({ data, onPrev }: StepFiveProps) {
                   <Badge variant="outline" className="mt-1 text-xs">
                     PDF • ID: {analysisResults.id_analisis}
                   </Badge>
+                  {errorPdf && (
+                    <div className="mt-1 text-xs text-red-600">
+                      {errorPdf}
+                    </div>
+                  )}
                 </div>
               </div>
-              <Button onClick={handleDownloadPDF}>
-                <Download className="mr-2 h-4 w-4" />
-                Descargar
+              <Button 
+                onClick={handleDownloadPDF} 
+                disabled={downloadingPdf || !analysisResults?.id_analisis}
+              >
+                {downloadingPdf ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    Descargar
+                  </>
+                )}
               </Button>
             </div>
 
@@ -581,11 +668,28 @@ export function StepFive({ data, onPrev }: StepFiveProps) {
                   <Badge variant="outline" className="mt-1 text-xs">
                     KMZ • ID: {analysisResults.id_analisis}
                   </Badge>
+                  {errorKmz && (
+                    <div className="mt-1 text-xs text-red-600">
+                      {errorKmz}
+                    </div>
+                  )}
                 </div>
               </div>
-              <Button onClick={handleDownloadKMZ}>
-                <Download className="mr-2 h-4 w-4" />
-                Descargar
+              <Button 
+                onClick={handleDownloadKMZ} 
+                disabled={downloadingKmz || !analysisResults?.id_analisis}
+              >
+                {downloadingKmz ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    Descargar
+                  </>
+                )}
               </Button>
             </div>
           </div>

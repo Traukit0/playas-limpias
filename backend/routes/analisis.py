@@ -1,9 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from db import SessionLocal
 from models.analisis import AnalisisDenuncia, ResultadoAnalisis
 from models.denuncias import Denuncia
+from models.concesiones import Concesion
+from models.evidencias import Evidencia
+from models.usuarios import Usuario
+from models.estados import EstadoDenuncia
 from schemas.analisis import AnalisisCreate, AnalisisResponseGeoJSON, ResultadoAnalisisResponse, AnalisisPreviewRequest, AnalisisPreviewResponse, ResultadoAnalisisResponse
 from security.auth import verificar_token
 from services.geoprocessing.buffer import generar_buffer_union
@@ -11,6 +16,12 @@ from services.geoprocessing.interseccion import intersectar_concesiones
 from datetime import datetime
 from typing import List
 import json
+import tempfile
+import os
+import logging
+
+# Configurar logger
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -107,3 +118,135 @@ def previsualizar_analisis(data: AnalisisPreviewRequest, db: Session = Depends(g
         buffer_geom=json.loads(buffer_geojson),
         resultados=resultados
     )
+
+@router.get("/{id_analisis}/pdf", dependencies=[Depends(verificar_token)])
+async def generar_pdf_analisis(
+    id_analisis: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """
+    Genera y descarga PDF completo del análisis
+    """
+    try:
+        # 1. Verificar que el análisis existe
+        analisis = db.query(AnalisisDenuncia).filter(
+            AnalisisDenuncia.id_analisis == id_analisis
+        ).first()
+        
+        if not analisis:
+            raise HTTPException(status_code=404, detail="Análisis no encontrado")
+        
+        # 2. Obtener datos relacionados
+        denuncia = db.query(Denuncia).filter(
+            Denuncia.id_denuncia == analisis.id_denuncia
+        ).first()
+        
+        # Obtener evidencias con coordenadas convertidas
+        evidencias_raw = db.query(Evidencia).filter(
+            Evidencia.id_denuncia == analisis.id_denuncia
+        ).all()
+        
+        # Convertir coordenadas a formato legible
+        evidencias = []
+        for ev in evidencias_raw:
+            try:
+                # Convertir coordenadas usando ST_AsGeoJSON
+                coords_result = db.execute(
+                    text("SELECT ST_AsGeoJSON(:geom)"),
+                    {"geom": ev.coordenadas}
+                ).scalar()
+                
+                # Crear objeto procesado
+                ev_dict = {
+                    'id_evidencia': ev.id_evidencia,
+                    'id_denuncia': ev.id_denuncia,
+                    'coordenadas_json': coords_result,
+                    'descripcion': ev.descripcion,
+                    'foto_url': ev.foto_url,
+                    'fecha': ev.fecha,
+                    'hora': ev.hora
+                }
+                evidencias.append(type('Evidencia', (), ev_dict))
+            except Exception as e:
+                logger.warning(f"Error procesando evidencia {ev.id_evidencia}: {e}")
+                # Agregar evidencia sin coordenadas en caso de error
+                ev_dict = {
+                    'id_evidencia': ev.id_evidencia,
+                    'id_denuncia': ev.id_denuncia,
+                    'coordenadas_json': None,
+                    'descripcion': ev.descripcion,
+                    'foto_url': ev.foto_url,
+                    'fecha': ev.fecha,
+                    'hora': ev.hora
+                }
+                evidencias.append(type('Evidencia', (), ev_dict))
+        
+        resultados = db.query(ResultadoAnalisis).filter(
+            ResultadoAnalisis.id_analisis == id_analisis
+        ).all()
+        
+        concesiones_ids = [r.id_concesion for r in resultados]
+        concesiones = []
+        if concesiones_ids:
+            concesiones = db.query(Concesion).filter(
+                Concesion.id_concesion.in_(concesiones_ids)
+            ).all()
+        
+        usuario = None
+        if denuncia and denuncia.id_usuario:
+            usuario = db.query(Usuario).filter(
+                Usuario.id_usuario == denuncia.id_usuario
+            ).first()
+        
+        estado = None
+        if denuncia and denuncia.id_estado:
+            estado = db.query(EstadoDenuncia).filter(
+                EstadoDenuncia.id_estado == denuncia.id_estado
+            ).first()
+        
+        # 3. Generar PDF (por ahora, crear PDF básico de prueba)
+        from services.pdf_generator import PDFGenerator
+        
+        pdf_generator = PDFGenerator()
+        pdf_bytes = await pdf_generator.generate_analysis_pdf(
+            analisis=analisis,
+            denuncia=denuncia,
+            evidencias=evidencias,
+            resultados=resultados,
+            concesiones=concesiones,
+            usuario=usuario,
+            estado=estado
+        )
+        
+        # 4. Crear archivo temporal
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+            temp_file.write(pdf_bytes)
+            temp_path = temp_file.name
+        
+        # 5. Función de limpieza
+        def cleanup():
+            try:
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+            except Exception as e:
+                logger.warning(f"Error eliminando archivo temporal: {e}")
+        
+        # 6. Programar limpieza
+        background_tasks.add_task(cleanup)
+        
+        # 7. Retornar archivo para descarga
+        sector_name = denuncia.lugar if denuncia else "sector"
+        filename = f"inspeccion_{sector_name.replace(' ', '_')}_{id_analisis}.pdf"
+        
+        return FileResponse(
+            path=temp_path,
+            media_type="application/pdf",
+            filename=filename
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generando PDF para análisis {id_analisis}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
