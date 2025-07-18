@@ -22,6 +22,7 @@ export interface InspectionData {
   inspector: string // (opcional, para mostrar nombre)
   observations: string
   gpxFile: File | null
+  utcOffset?: number | null
   photos: File[]
   analysisComplete: boolean
   id_evidencias?: number[] // IDs de evidencias asociadas a la denuncia

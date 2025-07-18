@@ -31,7 +31,7 @@ interface StepTwoProps {
 export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
   const [file, setFile] = useState<File | null>(data.gpxFile)
   const [waypoints, setWaypoints] = useState<number>(0)
-  const [utcOffset, setUtcOffset] = useState<number | null>(null)
+  const [utcOffset, setUtcOffset] = useState<number | null>(data.utcOffset || null)
   const [uploading, setUploading] = useState(false)
   const [uploaded, setUploaded] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -191,7 +191,11 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
           <select
             className="border rounded px-3 py-2"
             value={utcOffset ?? ""}
-            onChange={e => setUtcOffset(Number(e.target.value))}
+                            onChange={e => {
+                  const value = Number(e.target.value)
+                  setUtcOffset(value)
+                  updateData({ utcOffset: value })
+                }}
           >
             <option value="" disabled>Seleccione un offset</option>
             <option value="-3">-3</option>
