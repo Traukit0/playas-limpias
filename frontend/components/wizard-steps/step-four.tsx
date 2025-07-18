@@ -5,7 +5,8 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { MapPin, ImageIcon, FileText, Play, CheckCircle, User, AlertCircle } from "lucide-react"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { MapPin, ImageIcon, FileText, Play, CheckCircle, User, AlertCircle, Info } from "lucide-react"
 import { AnalysisMap } from "@/components/analysis-map"
 import type { InspectionData } from "@/components/inspection-wizard"
 import { API_TOKEN, API_BASE_URL } from "./step-one"
@@ -119,6 +120,7 @@ function CustomPanes() {
 export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisComplete, setAnalysisComplete] = useState(data.analysisComplete)
+  const [analysisExecuted, setAnalysisExecuted] = useState(false)
   
   // Estados para datos de usuario y estado
   const [usuario, setUsuario] = useState<Usuario | null>(null)
@@ -249,15 +251,62 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
     }
   }
 
-  const handleAnalysis = () => {
+  const handleAnalysisConfirmation = async () => {
     setIsAnalyzing(true)
+    setAnalysisExecuted(true)
 
-    // Simular análisis
-    setTimeout(() => {
-      setIsAnalyzing(false)
+    try {
+      // Ejecutar análisis real enviando datos a la base de datos
+      const response = await fetch(`${API_BASE_URL}/analisis`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${API_TOKEN}`,
+        },
+        body: JSON.stringify({
+          id_denuncia: data.id_denuncia,
+          distancia_buffer: bufferPreview || 0,
+          metodo: "buffer_analysis",
+          observaciones: data.observations || "Análisis automático generado desde la aplicación web"
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Error en el análisis: ${response.status}`)
+      }
+
+      const analysisResult = await response.json()
+
+      // Obtener información completa de las concesiones intersectadas
+      const concesionesSeleccionadas = concesiones.filter(c => 
+        analysisResult.resultados.some((r: any) => r.id_concesion === c.id_concesion)
+      )
+
+      // Guardar todos los resultados del análisis en los datos del wizard
+      updateData({ 
+        analysisResults: {
+          id_analisis: analysisResult.id_analisis,
+          fecha_analisis: analysisResult.fecha_analisis,
+          buffer_distance: analysisResult.distancia_buffer,
+          metodo: analysisResult.metodo,
+          observaciones: analysisResult.observaciones,
+          intersected_concessions: analysisResult.resultados,
+          concessions_data: concesionesSeleccionadas,
+          buffer_geom: analysisResult.buffer_geom
+        }
+      })
+
       setAnalysisComplete(true)
       updateData({ analysisComplete: true })
-    }, 3000)
+
+    } catch (error) {
+      console.error('Error durante el análisis:', error)
+      setErrorPreview(error instanceof Error ? error.message : 'Error inesperado durante el análisis')
+      setIsAnalyzing(false)
+      setAnalysisExecuted(false)
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   // Calcular centro del mapa (usar primer evidencia si existe, si no fallback a [0,0])
@@ -439,11 +488,12 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
             step={50}
             value={bufferInput === undefined ? '' : bufferInput}
             placeholder="Ej: 500"
+            disabled={analysisExecuted}
             onChange={e => {
               const val = e.target.value === '' ? undefined : Number(e.target.value)
               setBufferInput(val)
             }}
-            className="border rounded px-2 py-1 w-24"
+            className="border rounded px-2 py-1 w-24 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
           <Button
             className="ml-2"
@@ -453,13 +503,65 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
               bufferInput === undefined ||
               bufferInput < 100 ||
               bufferInput > 5000 ||
-              !data.id_denuncia
+              !data.id_denuncia ||
+              analysisExecuted
             }
           >
             {loadingPreview ? "Procesando..." : "Actualizar"}
           </Button>
+          
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="default"
+                className="ml-2"
+                disabled={!previewData || analysisExecuted || isAnalyzing}
+              >
+                <Play className="h-4 w-4 mr-1" />
+                {isAnalyzing ? "Analizando..." : "Ejecutar Análisis"}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar Análisis</AlertDialogTitle>
+                <AlertDialogDescription>
+                  ¿Está seguro de que desea ejecutar el análisis con una distancia de buffer de {bufferPreview}m? 
+                  Esta acción procesará {idsConcesionesIntersectadas.length} concesiones intersectadas.
+                  Una vez iniciado, no podrá modificar los parámetros.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleAnalysisConfirmation}>
+                  Confirmar Análisis
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
         {errorPreview && <div className="text-red-600 text-sm mb-2">{errorPreview}</div>}
+
+        {/* Caja de instrucciones */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="text-sm">
+              <h4 className="font-medium text-blue-900 mb-2">Instrucciones para el Análisis</h4>
+              <ol className="list-decimal list-inside space-y-1 text-blue-800">
+                <li>Ingrese la distancia de buffer deseada (entre 100 y 5000 metros)</li>
+                <li>Presione "Actualizar" para ver la previsualización en el mapa</li>
+                <li>Revise las concesiones intersectadas mostradas en rojo</li>
+                <li>Cuando esté satisfecho con el buffer, presione "Ejecutar Análisis"</li>
+                <li>Confirme la ejecución en el diálogo que aparecerá</li>
+              </ol>
+              {previewData && (
+                <div className="mt-3 p-2 bg-blue-100 rounded">
+                  <strong>Resumen actual:</strong> Buffer de {bufferPreview}m intersecta con {idsConcesionesIntersectadas.length} concesión(es)
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* Mapa de análisis con react-leaflet */}
         <div className="space-y-4">
@@ -543,6 +645,7 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
             Anterior
           </Button>
           <Button onClick={onNext} disabled={!analysisComplete}>
+            {analysisComplete ? <CheckCircle className="h-4 w-4 mr-1" /> : null}
             Ver Resultados
           </Button>
         </div>

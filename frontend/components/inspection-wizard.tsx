@@ -25,6 +25,16 @@ export interface InspectionData {
   photos: File[]
   analysisComplete: boolean
   id_evidencias?: number[] // IDs de evidencias asociadas a la denuncia
+  analysisResults?: {
+    id_analisis?: number
+    fecha_analisis?: string
+    buffer_distance: number
+    metodo?: string
+    observaciones?: string
+    intersected_concessions: any[]
+    concessions_data: any[]
+    buffer_geom: any
+  }
 }
 
 const steps = [
