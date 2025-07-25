@@ -147,21 +147,30 @@ async def generar_pdf_analisis(
             Evidencia.id_denuncia == analisis.id_denuncia
         ).all()
         
-        # Convertir coordenadas a formato legible
+        # Convertir coordenadas usando consulta SQL correcta para WKBElement
         evidencias = []
         for ev in evidencias_raw:
             try:
-                # Convertir coordenadas usando ST_AsGeoJSON
-                coords_result = db.execute(
-                    text("SELECT ST_AsGeoJSON(:geom)"),
-                    {"geom": ev.coordenadas}
-                ).scalar()
+                # Convertir WKBElement a coordenadas legibles usando ST_X y ST_Y
+                coords_query = db.execute(
+                    text("SELECT ST_X(coordenadas) as lon, ST_Y(coordenadas) as lat FROM evidencias WHERE id_evidencia = :id"),
+                    {"id": ev.id_evidencia}
+                ).fetchone()
                 
-                # Crear objeto procesado
+                if coords_query:
+                    # Crear diccionario GeoJSON manualmente
+                    coordenadas_dict = {
+                        "type": "Point",
+                        "coordinates": [float(coords_query.lon), float(coords_query.lat)]
+                    }
+                else:
+                    coordenadas_dict = None
+                
+                # Crear objeto procesado compatible con el nuevo PDFGenerator
                 ev_dict = {
                     'id_evidencia': ev.id_evidencia,
                     'id_denuncia': ev.id_denuncia,
-                    'coordenadas_json': coords_result,
+                    'coordenadas': coordenadas_dict,
                     'descripcion': ev.descripcion,
                     'foto_url': ev.foto_url,
                     'fecha': ev.fecha,
@@ -174,7 +183,7 @@ async def generar_pdf_analisis(
                 ev_dict = {
                     'id_evidencia': ev.id_evidencia,
                     'id_denuncia': ev.id_denuncia,
-                    'coordenadas_json': None,
+                    'coordenadas': None,
                     'descripcion': ev.descripcion,
                     'foto_url': ev.foto_url,
                     'fecha': ev.fecha,

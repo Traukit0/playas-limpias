@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Inspección</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        /* Reset básico */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.5;
+            color: #333;
+            font-size: 12px;
+        }
+
+        /* Colores del tema */
+        .primary-color { color: #1976d2; }
+        .secondary-color { color: #757575; }
+        .success-color { color: #4caf50; }
+        .error-color { color: #f44336; }
+
+        /* Portada */
+        .cover-page {
+            text-align: center;
+            background: #1976d2;
+            color: white;
+            padding: 40px 20px;
+            margin-bottom: 30px;
+            page-break-after: always;
+        }
+
+        .cover-title {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
+
+        .cover-subtitle {
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+
+        .cover-info {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            margin: 0 auto;
+            max-width: 400px;
+        }
+
+        .cover-info div {
+            margin-bottom: 10px;
+            text-align: left;
+        }
+
+        /* Tarjetas */
+        .card {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            padding: 20px;
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+
+        .card-header {
+            border-bottom: 2px solid #1976d2;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 6px;
+        }
+
+        .card-subtitle {
+            font-size: 14px;
+            color: #757575;
+        }
+
+        /* Métricas - usando tabla para mejor compatibilidad */
+        .metrics-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+        }
+
+        .metrics-table td {
+            text-align: center;
+            padding: 16px 8px;
+            border: 1px solid #e0e0e0;
+            background: #f5f5f5;
+            width: 25%;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1976d2;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: #757575;
+            text-transform: uppercase;
+        }
+
+        /* Tablas modernas */
+        .modern-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            background: white;
+        }
+
+        .modern-table th {
+            background: #1976d2;
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .modern-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 11px;
+        }
+
+        .modern-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        /* Chips/badges */
+        .chip {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .chip.success {
+            background: #4caf50;
+        }
+
+        .chip.error {
+            background: #f44336;
+        }
+
+        .chip.info {
+            background: #2196f3;
+        }
+
+        /* Evidencias */
+        .evidence-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-left: 4px solid #4caf50;
+            padding: 12px;
+            margin-bottom: 10px;
+            page-break-inside: avoid;
+        }
+
+        .evidence-header {
+            margin-bottom: 8px;
+        }
+
+        .evidence-id {
+            font-weight: bold;
+            color: #1976d2;
+            display: inline-block;
+            margin-right: 20px;
+        }
+
+        .evidence-datetime {
+            font-size: 11px;
+            color: #757575;
+            float: right;
+        }
+
+        .coordinates {
+            font-family: monospace;
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+        }
+
+        /* Secciones */
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1976d2;
+            margin: 20px 0 12px 0;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        /* Utilidades */
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .font-bold { font-weight: bold; }
+        .mb-16 { margin-bottom: 16px; }
+        .mt-16 { margin-top: 16px; }
+
+        /* Parámetros técnicos */
+        .params-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .params-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .params-table td:first-child {
+            background: #f5f5f5;
+            font-weight: bold;
+            width: 40%;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 11px;
+            color: #757575;
+            border-top: 1px solid #e0e0e0;
+            padding-top: 16px;
+        }
+
+        /* Evitar saltos de página no deseados */
+        h1, h2, h3, .card-title { page-break-after: avoid; }
+        .evidence-item, .card { page-break-inside: avoid; }
+    </style>
+</head>
+<body>
+    <!-- PORTADA -->
+    <div class="cover-page">
+        <div class="cover-title">REPORTE DE INSPECCIÓN</div>
+        <div class="cover-subtitle">Sistema de Monitoreo Costero - Playas Limpias</div>
+        
+        <div class="cover-info">
+            <div>
+                <strong>ID de Análisis:</strong> #{{ analisis.id_analisis }}
+            </div>
+            <div>
+                <strong>Sector:</strong> {{ denuncia.lugar if denuncia else 'No especificado' }}
+            </div>
+            <div>
+                <strong>Fecha de Inspección:</strong> {{ denuncia.fecha_inspeccion.strftime('%d/%m/%Y') if denuncia and denuncia.fecha_inspeccion else 'No especificada' }}
+            </div>
+            <div>
+                <strong>Inspector:</strong> {{ usuario.nombre if usuario else 'No especificado' }}
+            </div>
+            <div>
+                <strong>Fecha de Análisis:</strong> {{ analisis.fecha_analisis.strftime('%d/%m/%Y %H:%M') }}
+            </div>
+        </div>
+    </div>
+
+    <!-- RESUMEN EJECUTIVO -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Resumen Ejecutivo</div>
+            <div class="card-subtitle">Métricas principales de la inspección</div>
+        </div>
+
+        <table class="metrics-table">
+            <tr>
+                <td>
+                    <span class="metric-value">{{ resultados|length }}</span>
+                    <span class="metric-label">Concesiones Intersectadas</span>
+                </td>
+                <td>
+                    <span class="metric-value">{{ evidencias|length }}</span>
+                    <span class="metric-label">Puntos GPS Recolectados</span>
+                </td>
+                <td>
+                    <span class="metric-value">{{ analisis.distancia_buffer }}m</span>
+                    <span class="metric-label">Distancia de Buffer</span>
+                </td>
+                <td>
+                    <span class="metric-value">{{ concesiones|map(attribute='titular')|unique|list|length }}</span>
+                    <span class="metric-label">Titulares Afectados</span>
+                </td>
+            </tr>
+        </table>
+
+        {% if analisis.observaciones %}
+        <div class="section-title">Observaciones</div>
+        <p>{{ analisis.observaciones }}</p>
+        {% endif %}
+    </div>
+
+    <!-- CONCESIONES INTERSECTADAS -->
+    {% if concesiones and resultados %}
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Concesiones Intersectadas</div>
+            <div class="card-subtitle">Detalle de las concesiones acuícolas afectadas</div>
+        </div>
+
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Código Centro</th>
+                    <th>Nombre</th>
+                    <th>Titular</th>
+                    <th>Tipo</th>
+                    <th>Región</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for resultado in resultados %}
+                    {% set concesion = concesiones|selectattr('id_concesion', 'equalto', resultado.id_concesion)|first %}
+                    {% if concesion %}
+                    <tr>
+                        <td class="font-bold">{{ concesion.codigo_centro }}</td>
+                        <td>{{ concesion.nombre }}</td>
+                        <td>{{ concesion.titular }}</td>
+                        <td>{{ concesion.tipo }}</td>
+                        <td>{{ concesion.region }}</td>
+                        <td>
+                            {% if resultado.interseccion_valida %}
+                                <span class="chip success">Válida</span>
+                            {% else %}
+                                <span class="chip error">No Válida</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- EVIDENCIAS GPS -->
+    {% if evidencias %}
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Evidencias GPS</div>
+            <div class="card-subtitle">Puntos de evidencia recolectados durante la inspección</div>
+        </div>
+
+        {% for evidencia in evidencias %}
+        <div class="evidence-item">
+            <div class="evidence-header">
+                <span class="evidence-id">Evidencia #{{ evidencia.id_evidencia }}</span>
+                <span class="evidence-datetime">
+                    {{ evidencia.fecha }} - {{ evidencia.hora }}
+                </span>
+                <div style="clear: both;"></div>
+            </div>
+            
+            {% if evidencia.coordenadas and evidencia.coordenadas.coordinates %}
+            <div style="margin-bottom: 6px;">
+                <strong>Coordenadas:</strong> 
+                <span class="coordinates">
+                    {{ "%.6f"|format(evidencia.coordenadas.coordinates[1]) }}, {{ "%.6f"|format(evidencia.coordenadas.coordinates[0]) }}
+                </span>
+            </div>
+            {% endif %}
+            
+            {% if evidencia.descripcion %}
+            <div style="margin-bottom: 6px;">
+                <strong>Descripción:</strong> {{ evidencia.descripcion }}
+            </div>
+            {% endif %}
+            
+            {% if evidencia.foto_url %}
+            <div>
+                <span class="chip info">📷 Con fotografía</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- PARÁMETROS TÉCNICOS -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Parámetros Técnicos</div>
+            <div class="card-subtitle">Configuración técnica del análisis realizado</div>
+        </div>
+
+        <table class="params-table">
+            <tr>
+                <td>ID de Análisis</td>
+                <td>#{{ analisis.id_analisis }}</td>
+            </tr>
+            <tr>
+                <td>ID de Denuncia</td>
+                <td>#{{ analisis.id_denuncia }}</td>
+            </tr>
+            <tr>
+                <td>Método de Análisis</td>
+                <td>{{ analisis.metodo }}</td>
+            </tr>
+            <tr>
+                <td>Distancia de Buffer</td>
+                <td>{{ analisis.distancia_buffer }}m</td>
+            </tr>
+            <tr>
+                <td>Fecha de Análisis</td>
+                <td>{{ analisis.fecha_analisis.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+            </tr>
+            {% if denuncia %}
+            <tr>
+                <td>Sector Inspeccionado</td>
+                <td>{{ denuncia.lugar }}</td>
+            </tr>
+            {% if denuncia.fecha_inspeccion %}
+            <tr>
+                <td>Fecha de Inspección</td>
+                <td>{{ denuncia.fecha_inspeccion.strftime('%d/%m/%Y') }}</td>
+            </tr>
+            {% endif %}
+            {% endif %}
+            {% if usuario %}
+            <tr>
+                <td>Inspector Responsable</td>
+                <td>{{ usuario.nombre }}</td>
+            </tr>
+            {% endif %}
+            {% if estado %}
+            <tr>
+                <td>Estado de la Denuncia</td>
+                <td>{{ estado.nombre }}</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <p>Reporte generado automáticamente por el Sistema de Monitoreo Costero - Playas Limpias</p>
+        <p>Fecha de generación: {{ now().strftime('%d/%m/%Y %H:%M:%S') }}</p>
+    </div>
+</body>
+</html> 

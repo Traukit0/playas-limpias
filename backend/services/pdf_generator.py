@@ -1,353 +1,226 @@
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from xhtml2pdf import pisa
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from io import BytesIO
 import logging
 from datetime import datetime
+import os
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 class PDFGenerator:
     def __init__(self):
-        self.styles = getSampleStyleSheet()
-        self.custom_styles = self._create_custom_styles()
-    
-    def _create_custom_styles(self):
-        """Crear estilos personalizados para el PDF"""
-        return {
-            'titulo': ParagraphStyle(
-                'titulo',
-                parent=self.styles['Heading1'],
-                fontSize=24,
-                spaceAfter=30,
-                alignment=TA_CENTER,
-                textColor=colors.darkblue
-            ),
-            'subtitulo': ParagraphStyle(
-                'subtitulo', 
-                parent=self.styles['Heading2'],
-                fontSize=16,
-                spaceAfter=12,
-                textColor=colors.darkblue
-            ),
-            'normal': ParagraphStyle(
-                'normal',
-                parent=self.styles['Normal'],
-                fontSize=10,
-                spaceAfter=6,
-                alignment=TA_LEFT
-            ),
-            'bold': ParagraphStyle(
-                'bold',
-                parent=self.styles['Normal'],
-                fontSize=10,
-                spaceAfter=6,
-                alignment=TA_LEFT,
-                fontName='Helvetica-Bold'
-            )
-        }
+        """
+        Inicializar el generador de PDF con xhtml2pdf y Jinja2
+        """
+        # Configurar el directorio de templates
+        self.template_dir = Path(__file__).parent.parent / "templates" / "pdf"
+        
+        # Configurar Jinja2 environment
+        self.jinja_env = Environment(
+            loader=FileSystemLoader(str(self.template_dir)),
+            autoescape=select_autoescape(['html', 'xml'])
+        )
+        
+        # Agregar función 'now' para usar en templates
+        self.jinja_env.globals['now'] = datetime.now
+        
+        logger.info("PDFGenerator inicializado con xhtml2pdf")
     
     async def generate_analysis_pdf(self, analisis, denuncia, evidencias, resultados, concesiones, usuario, estado):
-        """Generar PDF completo del análisis"""
+        """
+        Generar PDF completo del análisis usando xhtml2pdf y templates HTML modernos
+        
+        Args:
+            analisis: Objeto AnalisisDenuncia
+            denuncia: Objeto Denuncia
+            evidencias: Lista de objetos Evidencia
+            resultados: Lista de objetos ResultadoAnalisis
+            concesiones: Lista de objetos Concesion
+            usuario: Objeto Usuario
+            estado: Objeto EstadoDenuncia
+            
+        Returns:
+            bytes: PDF generado
+        """
         try:
             logger.info(f"Iniciando generación de PDF para análisis {analisis.id_analisis}")
             
-            buffer = BytesIO()
-            doc = SimpleDocTemplate(
-                buffer, 
-                pagesize=A4, 
-                rightMargin=72, 
-                leftMargin=72, 
-                topMargin=72, 
-                bottomMargin=72
+            # Preparar datos para el template
+            context_data = self._prepare_template_context(
+                analisis, denuncia, evidencias, resultados, concesiones, usuario, estado
             )
             
-            # Contenido del PDF
-            story = []
+            # Cargar y renderizar el template
+            template = self.jinja_env.get_template('inspection_report_xhtml2pdf.html')
+            html_content = template.render(**context_data)
             
-            # 1. PORTADA
-            story.extend(self._create_portada(analisis, denuncia, usuario))
-            story.append(PageBreak())
+            # Generar PDF con xhtml2pdf
+            pdf_bytes = self._generate_pdf_from_html(html_content)
             
-            # 2. RESUMEN EJECUTIVO  
-            story.extend(self._create_resumen_ejecutivo(analisis, evidencias, concesiones, resultados))
-            story.append(PageBreak())
-            
-            # 3. CONCESIONES DETALLADAS
-            if concesiones and resultados:
-                story.extend(self._create_concesiones_section(concesiones, resultados))
-                story.append(PageBreak())
-            
-            # 4. EVIDENCIAS GPS
-            if evidencias:
-                story.extend(self._create_evidencias_section(evidencias))
-                story.append(PageBreak())
-            
-            # 5. PARÁMETROS TÉCNICOS
-            story.extend(self._create_parametros_section(analisis, denuncia))
-            
-            # Construir PDF
-            doc.build(story)
-            
-            # Retornar bytes
-            buffer.seek(0)
-            pdf_bytes = buffer.getvalue()
-            buffer.close()
-            
-            logger.info(f"PDF generado exitosamente para análisis {analisis.id_analisis}")
+            logger.info(f"PDF generado exitosamente para análisis {analisis.id_analisis} ({len(pdf_bytes)} bytes)")
             return pdf_bytes
             
         except Exception as e:
-            logger.error(f"Error generando PDF: {str(e)}")
+            logger.error(f"Error generando PDF para análisis {analisis.id_analisis}: {str(e)}")
             raise
     
-    def _create_portada(self, analisis, denuncia, usuario):
-        """Crear página de portada"""
-        content = []
-        
-        # Título principal
-        content.append(Paragraph("REPORTE DE INSPECCIÓN", self.custom_styles['titulo']))
-        content.append(Spacer(1, 0.5*inch))
-        
-        # Información básica
-        info_data = [
-            ['<b>Campo</b>', '<b>Valor</b>'],
-            ['ID de Análisis:', f"#{analisis.id_analisis}"],
-            ['Sector:', denuncia.lugar if denuncia else 'N/A'],
-            ['Fecha de Inspección:', denuncia.fecha_inspeccion.strftime('%d/%m/%Y') if denuncia and denuncia.fecha_inspeccion else 'N/A'],
-            ['Inspector:', usuario.nombre if usuario else 'N/A'],
-            ['Fecha de Análisis:', analisis.fecha_analisis.strftime('%d/%m/%Y %H:%M') if analisis.fecha_analisis else 'N/A'],
-            ['Método:', analisis.metodo or 'N/A'],
-        ]
-        
-        info_table = Table(info_data, colWidths=[2.5*inch, 3*inch])
-        info_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('TOPPADDING', (0, 0), (-1, -1), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        
-        content.append(info_table)
-        content.append(Spacer(1, 1*inch))
-        
-        # Nota sobre el reporte
-        nota = """
-        Este reporte contiene los resultados del análisis de intersección entre las evidencias GPS 
-        recolectadas durante la inspección y las concesiones acuícolas registradas en la base de datos.
+    def _prepare_template_context(self, analisis, denuncia, evidencias, resultados, concesiones, usuario, estado):
         """
-        content.append(Paragraph(nota, self.custom_styles['normal']))
+        Preparar el contexto de datos para el template Jinja2
         
-        return content
-    
-    def _create_resumen_ejecutivo(self, analisis, evidencias, concesiones, resultados):
-        """Crear sección de resumen ejecutivo"""
-        content = []
-        
-        content.append(Paragraph("RESUMEN EJECUTIVO", self.custom_styles['subtitulo']))
-        content.append(Spacer(1, 0.2*inch))
-        
-        # Métricas principales
-        titulares_unicos = len(set(c.titular for c in concesiones)) if concesiones else 0
-        
-        metricas_data = [
-            ['<b>Métrica</b>', '<b>Valor</b>'],
-            ['Concesiones Intersectadas', str(len(resultados))],
-            ['Puntos GPS Recolectados', str(len(evidencias))],
-            ['Distancia de Buffer', f"{analisis.distancia_buffer}m"],
-            ['Titulares Afectados', str(titulares_unicos)]
-        ]
-        
-        metricas_table = Table(metricas_data, colWidths=[3*inch, 2*inch])
-        metricas_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('TOPPADDING', (0, 0), (-1, -1), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        
-        content.append(metricas_table)
-        content.append(Spacer(1, 0.3*inch))
-        
-        # Resumen textual
-        resumen_text = f"""
-        El análisis procesó {len(evidencias)} puntos GPS utilizando un buffer de {analisis.distancia_buffer} metros, 
-        identificando {len(resultados)} concesiones que intersectan con el área de estudio. 
-        Se determinó que {titulares_unicos} titular(es) únicos se ven afectados por esta inspección.
+        Returns:
+            dict: Contexto con todos los datos necesarios para el template
         """
-        
-        content.append(Paragraph("<b>Resumen:</b>", self.custom_styles['bold']))
-        content.append(Paragraph(resumen_text, self.custom_styles['normal']))
-        
-        return content
-    
-    def _create_concesiones_section(self, concesiones, resultados):
-        """Crear sección de concesiones detalladas"""
-        content = []
-        
-        content.append(Paragraph("CONCESIONES INTERSECTADAS", self.custom_styles['subtitulo']))
-        content.append(Spacer(1, 0.2*inch))
-        
-        # Crear tabla de concesiones
-        headers = ['Código Centro', 'Nombre', 'Titular', 'Tipo', 'Región', 'Intersección']
-        table_data = [headers]
-        
-        # Crear un diccionario para búsqueda rápida de resultados
-        resultados_dict = {r.id_concesion: r for r in resultados}
-        
-        for concesion in concesiones:
-            resultado = resultados_dict.get(concesion.id_concesion)
-            table_data.append([
-                concesion.codigo_centro or 'N/A',
-                concesion.nombre or 'N/A',
-                concesion.titular or 'N/A',
-                concesion.tipo or 'N/A',
-                concesion.region or 'N/A',
-                'Válida' if resultado and resultado.interseccion_valida else 'No Válida'
-            ])
-        
-        # Ajustar ancho de columnas según el contenido
-        col_widths = [1*inch, 1.3*inch, 1.5*inch, 1*inch, 1*inch, 0.8*inch]
-        concesiones_table = Table(table_data, colWidths=col_widths)
-        concesiones_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        
-        content.append(concesiones_table)
-        
-        return content
-    
-    def _create_evidencias_section(self, evidencias):
-        """Crear sección de evidencias GPS"""
-        content = []
-        
-        content.append(Paragraph("EVIDENCIAS GPS", self.custom_styles['subtitulo']))
-        content.append(Spacer(1, 0.2*inch))
-        
-        # Crear tabla de evidencias
-        headers = ['ID', 'Fecha', 'Hora', 'Coordenadas', 'Descripción', 'Foto']
-        table_data = [headers]
-        
-        for ev in evidencias:
-            # Extraer coordenadas desde JSON string
-            coords_text = 'N/A'
-            try:
-                if ev.coordenadas_json:
-                    import json
-                    coords = json.loads(ev.coordenadas_json)
-                    if 'coordinates' in coords and len(coords['coordinates']) >= 2:
-                        lon = coords['coordinates'][0]
-                        lat = coords['coordinates'][1]
-                        coords_text = f"{lat:.6f}, {lon:.6f}"
-            except (json.JSONDecodeError, KeyError, IndexError) as e:
-                logger.warning(f"Error procesando coordenadas para evidencia {ev.id_evidencia}: {e}")
-                coords_text = 'Error en coordenadas'
+        try:
+            # Convertir evidencias para mejor manejo en template
+            evidencias_data = []
+            if evidencias:
+                for evidencia in evidencias:
+                    evidencia_dict = {
+                        'id_evidencia': evidencia.id_evidencia,
+                        'fecha': evidencia.fecha.strftime('%d/%m/%Y') if evidencia.fecha else 'N/A',
+                        'hora': evidencia.hora.strftime('%H:%M:%S') if evidencia.hora else 'N/A',
+                        'descripcion': evidencia.descripcion or '',
+                        'foto_url': evidencia.foto_url or '',
+                        'coordenadas': evidencia.coordenadas if hasattr(evidencia, 'coordenadas') else None
+                    }
+                    evidencias_data.append(evidencia_dict)
             
-            table_data.append([
-                str(ev.id_evidencia),
-                str(ev.fecha) if ev.fecha else 'N/A',
-                str(ev.hora) if ev.hora else 'N/A',
-                coords_text,
-                (ev.descripcion[:30] + '...') if ev.descripcion and len(ev.descripcion) > 30 else (ev.descripcion or 'N/A'),
-                'Sí' if ev.foto_url else 'No'
-            ])
-        
-        col_widths = [0.5*inch, 0.8*inch, 0.8*inch, 1.5*inch, 2*inch, 0.5*inch]
-        evidencias_table = Table(table_data, colWidths=col_widths)
-        evidencias_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        
-        content.append(evidencias_table)
-        
-        return content
+            # Convertir concesiones para mejor manejo
+            concesiones_data = []
+            if concesiones:
+                for concesion in concesiones:
+                    concesion_dict = {
+                        'id_concesion': concesion.id_concesion,
+                        'codigo_centro': concesion.codigo_centro or 'N/A',
+                        'nombre': concesion.nombre or 'N/A',
+                        'titular': concesion.titular or 'N/A',
+                        'tipo': concesion.tipo or 'N/A',
+                        'region': concesion.region or 'N/A'
+                    }
+                    concesiones_data.append(concesion_dict)
+            
+            # Convertir resultados (según esquema real de BD)
+            resultados_data = []
+            if resultados:
+                for resultado in resultados:
+                    resultado_dict = {
+                        'id_concesion': resultado.id_concesion,
+                        'interseccion_valida': resultado.interseccion_valida,
+                        'distancia_minima': getattr(resultado, 'distancia_minima', None)
+                    }
+                    resultados_data.append(resultado_dict)
+            
+            # Preparar contexto completo
+            context = {
+                'analisis': analisis,
+                'denuncia': denuncia,
+                'evidencias': evidencias_data,
+                'resultados': resultados_data,
+                'concesiones': concesiones_data,
+                'usuario': usuario,
+                'estado': estado,
+                'fecha_generacion': datetime.now(),
+                # Filtros personalizados para Jinja2
+                'titulares_unicos': len(set(c.get('titular', '') for c in concesiones_data)) if concesiones_data else 0
+            }
+            
+            logger.debug(f"Contexto preparado: {len(evidencias_data)} evidencias, {len(concesiones_data)} concesiones")
+            return context
+            
+        except Exception as e:
+            logger.error(f"Error preparando contexto del template: {str(e)}")
+            raise
     
-    def _create_parametros_section(self, analisis, denuncia):
-        """Crear sección de parámetros técnicos"""
-        content = []
-        
-        content.append(Paragraph("PARÁMETROS TÉCNICOS", self.custom_styles['subtitulo']))
-        content.append(Spacer(1, 0.2*inch))
-        
-        # Información técnica del análisis
-        params_data = [
-            ['<b>Parámetro</b>', '<b>Valor</b>'],
-            ['ID de Análisis', f"#{analisis.id_analisis}"],
-            ['ID de Denuncia', f"#{analisis.id_denuncia}"],
-            ['Método de Análisis', analisis.metodo or 'N/A'],
-            ['Distancia de Buffer', f"{analisis.distancia_buffer} metros"],
-            ['Fecha de Análisis', analisis.fecha_analisis.strftime('%d/%m/%Y %H:%M:%S') if analisis.fecha_analisis else 'N/A'],
-            ['Observaciones', analisis.observaciones or 'Sin observaciones']
-        ]
-        
-        # Agregar información de la denuncia si está disponible
-        if denuncia:
-            params_data.extend([
-                ['Sector Inspeccionado', denuncia.lugar or 'N/A'],
-                ['Fecha de Inspección', denuncia.fecha_inspeccion.strftime('%d/%m/%Y') if denuncia.fecha_inspeccion else 'N/A'],
-                ['Fecha de Ingreso', denuncia.fecha_ingreso.strftime('%d/%m/%Y') if denuncia.fecha_ingreso else 'N/A']
-            ])
-        
-        params_table = Table(params_data, colWidths=[2.5*inch, 3.5*inch])
-        params_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        
-        content.append(params_table)
-        
-        # Agregar nota final
-        content.append(Spacer(1, 0.5*inch))
-        nota_final = f"""
-        <b>Nota:</b> Este reporte fue generado automáticamente el {datetime.now().strftime('%d/%m/%Y a las %H:%M:%S')} 
-        utilizando los datos almacenados en la base de datos del sistema de inspección de playas.
+    def _generate_pdf_from_html(self, html_content):
         """
-        content.append(Paragraph(nota_final, self.custom_styles['normal']))
+        Generar PDF desde contenido HTML usando xhtml2pdf
         
-        return content 
+        Args:
+            html_content (str): Contenido HTML renderizado
+            
+        Returns:
+            bytes: PDF generado
+        """
+        try:
+            # Crear buffer para el PDF
+            pdf_buffer = BytesIO()
+            
+            # Generar PDF con xhtml2pdf
+            pisa_status = pisa.pisaDocument(
+                src=html_content,
+                dest=pdf_buffer,
+                encoding='UTF-8'
+            )
+            
+            # Verificar si hubo errores
+            if pisa_status.err:
+                raise Exception(f"Error generando PDF con xhtml2pdf: {pisa_status.err} errores")
+            
+            # Obtener bytes del PDF
+            pdf_buffer.seek(0)
+            pdf_bytes = pdf_buffer.getvalue()
+            pdf_buffer.close()
+            
+            return pdf_bytes
+            
+        except Exception as e:
+            logger.error(f"Error generando PDF con xhtml2pdf: {str(e)}")
+            raise
+    
+    def generate_simple_test_pdf(self):
+        """
+        Generar un PDF simple para pruebas
+        
+        Returns:
+            bytes: PDF de prueba
+        """
+        try:
+            html_content = f'''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test PDF</title>
+    <style>
+        @page {{ size: A4; margin: 2cm; }}
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; }}
+        .header {{ background: #1976d2; color: white; padding: 30px; text-align: center; margin-bottom: 30px; }}
+        .content {{ background: #f5f5f5; padding: 20px; border: 1px solid #ddd; }}
+        h1 {{ margin: 0 0 10px 0; font-size: 24px; }}
+        h2 {{ color: #1976d2; margin-top: 0; }}
+        ul {{ margin: 16px 0; padding-left: 20px; }}
+        li {{ margin: 8px 0; }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>PDF Generado con xhtml2pdf</h1>
+        <p>Sistema Playas Limpias - Nuevo Generador de PDF</p>
+    </div>
+    
+    <div class="content">
+        <h2>¡Implementación Exitosa!</h2>
+        <p>Este PDF ha sido generado usando <strong>xhtml2pdf</strong> en lugar de ReportLab.</p>
+        <p>Fecha de generación: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</p>
+        
+        <h3>Ventajas de xhtml2pdf:</h3>
+        <ul>
+            <li>✅ PDFs modernos y atractivos visualmente</li>
+            <li>✅ Compatible con CSS para diseño moderno</li>
+            <li>✅ Muy liviano (sin dependencias externas complejas)</li>
+            <li>✅ Compatible con Windows y Linux</li>
+            <li>✅ Fácil mantenimiento con templates HTML</li>
+            <li>✅ Instalación simple sin librerías GTK+</li>
+        </ul>
+        
+        <p><strong>¡La migración ha sido exitosa!</strong></p>
+    </div>
+</body>
+</html>'''
+            
+            return self._generate_pdf_from_html(html_content)
+            
+        except Exception as e:
+            logger.error(f"Error generando PDF de prueba: {str(e)}")
+            raise 
