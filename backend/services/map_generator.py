@@ -26,8 +26,8 @@ class MapGenerator:
     
     def __init__(self):
         self.fotos_dir = Path(FOTOS_DIR)
-        self.map_width = 800
-        self.map_height = 600
+        self.map_width = 1024
+        self.map_height = 900
         logger.info(f"MapGenerator inicializado. FOTOS_DIR: {self.fotos_dir}")
         logger.info(f"STATICMAPS_AVAILABLE: {STATICMAPS_AVAILABLE}")
         if STATICMAPS_AVAILABLE:
@@ -84,8 +84,9 @@ class MapGenerator:
             
             # Renderizar mapa
             mapa_path = denuncia_dir / f"mapa_analisis_{id_analisis}.png"
-            logger.info(f"🗂️ Guardando mapa en: {mapa_path}")
-            logger.info(f"🎨 Renderizando mapa {self.map_width}x{self.map_height}...")
+            
+            # py-staticmaps calcula automáticamente el mejor zoom y centro
+            # para ajustarse a todos los elementos agregados
             image = context.render_pillow(self.map_width, self.map_height)
             image.save(str(mapa_path))
             
