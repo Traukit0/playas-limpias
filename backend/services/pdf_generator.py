@@ -52,7 +52,7 @@ class PDFGenerator:
             )
             
             # Cargar y renderizar el template
-            template = self.jinja_env.get_template('inspection_report_xhtml2pdf.html')
+            template = self.jinja_env.get_template('inspection_report_basic_only.html')
             html_content = template.render(**context_data)
             
             # Generar PDF con xhtml2pdf

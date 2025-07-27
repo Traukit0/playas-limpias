@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Inspección - Playas Limpias</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12pt;
+            color: #333;
+        }
+
+        h1 {
+            font-size: 22pt;
+            font-weight: bold;
+            color: #1976d2;
+            text-align: center;
+            margin-bottom: 20pt;
+            padding: 15pt;
+            background-color: #e3f2fd;
+            border: 2pt solid #1976d2;
+        }
+
+        h2 {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #1976d2;
+            margin-top: 15pt;
+            margin-bottom: 8pt;
+            padding: 8pt;
+            background-color: #f3f9ff;
+            border-left: 3pt solid #1976d2;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12pt;
+            font-size: 11pt;
+        }
+
+        table th {
+            background-color: #1976d2;
+            color: white;
+            padding: 8pt;
+            text-align: left;
+            font-weight: bold;
+            border: 1pt solid #0d47a1;
+        }
+
+        table td {
+            padding: 6pt;
+            border: 1pt solid #e0e0e0;
+            vertical-align: top;
+        }
+
+        .info-card {
+            border: 1pt solid #e0e0e0;
+            padding: 10pt;
+            margin: 8pt 0;
+            background-color: #fafafa;
+        }
+
+        .metric-box {
+            float: left;
+            width: 20%;
+            margin: 0 2.5%;
+            padding: 10pt;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .metric-box-blue {
+            border: 2pt solid #1976d2;
+            background-color: #e3f2fd;
+        }
+
+        .metric-box-green {
+            border: 2pt solid #4caf50;
+            background-color: #e8f5e8;
+        }
+
+        .metric-box-orange {
+            border: 2pt solid #ff9800;
+            background-color: #fff3e0;
+        }
+
+        .metric-box-purple {
+            border: 2pt solid #9c27b0;
+            background-color: #f3e5f5;
+        }
+
+        .metric-value {
+            font-size: 18pt;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 6pt;
+        }
+
+        .metric-value-blue { color: #1976d2; }
+        .metric-value-green { color: #4caf50; }
+        .metric-value-orange { color: #ff9800; }
+        .metric-value-purple { color: #9c27b0; }
+
+        .metric-label {
+            font-size: 10pt;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .clearfix {
+            clear: both;
+        }
+
+        .info-left {
+            float: left;
+            width: 47%;
+            margin-right: 3%;
+        }
+
+        .info-right {
+            float: left;
+            width: 47%;
+        }
+
+        .evidence-box {
+            float: left;
+            width: 47%;
+            margin: 0 1.5% 10pt 1.5%;
+            border: 1pt solid #e0e0e0;
+            padding: 8pt;
+            background-color: #fafafa;
+        }
+
+        .evidence-header {
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 6pt;
+            border-bottom: 1pt solid #e0e0e0;
+            padding-bottom: 3pt;
+        }
+
+                 .evidence-coords {
+             font-family: "Courier New", monospace;
+             font-size: 10pt;
+             color: #666;
+             background-color: #e8eaf6;
+             padding: 4pt;
+             margin: 4pt 0;
+         }
+
+         .badge {
+             display: inline-block;
+             padding: 3pt 8pt;
+             font-size: 10pt;
+             font-weight: bold;
+         }
+
+        .badge-success {
+            background-color: #4caf50;
+            color: white;
+            border: 1pt solid #388e3c;
+        }
+
+        .badge-info {
+            background-color: #2196f3;
+            color: white;
+            border: 1pt solid #1976d2;
+        }
+
+        .badge-error {
+            background-color: #f44336;
+            color: white;
+            border: 1pt solid #d32f2f;
+        }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .font-bold { font-weight: bold; }
+        .font-mono { font-family: "Courier New", monospace; }
+        .text-muted { color: #666; }
+        .text-primary { color: #1976d2; }
+
+        .page-break { page-break-before: always; }
+
+        .section-divider {
+            border: none;
+            height: 2pt;
+            background-color: #1976d2;
+            margin: 15pt 0;
+        }
+
+        .row-gray {
+            background-color: #f8f9fa;
+        }
+
+        .row-white {
+            background-color: white;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #424242;
+            width: 35%;
+            background-color: #f5f5f5;
+        }
+
+        .info-value {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>REPORTE DE INSPECCIÓN<br/>Sistema de Monitoreo Costero - Playas Limpias</h1>
+    
+    <div class="info-left">
+        <table>
+            <tr>
+                <td class="info-label">ID de Análisis</td>
+                <td class="info-value font-mono font-bold text-primary">#{{ analisis.id_analisis }}</td>
+            </tr>
+            <tr>
+                <td class="info-label">Fecha de Generación</td>
+                <td class="info-value">{{ fecha_generacion.strftime('%d de %B de %Y a las %H:%M') }}</td>
+            </tr>
+            <tr>
+                <td class="info-label">Inspector</td>
+                <td class="info-value font-bold">{{ usuario.nombre }}</td>
+            </tr>
+        </table>
+    </div>
+    <div class="info-right">
+        <table>
+            <tr>
+                <td class="info-label">Estado</td>
+                <td class="info-value">
+                    <span class="badge badge-success">{{ estado.estado }}</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="info-label">Tipo de Reporte</td>
+                <td class="info-value">Inspección Geoespacial</td>
+            </tr>
+            <tr>
+                <td class="info-label">Versión</td>
+                <td class="info-value">2.1</td>
+            </tr>
+        </table>
+    </div>
+    <div class="clearfix"></div>
+
+    <hr class="section-divider" />
+
+    <h2>Resumen Ejecutivo</h2>
+    
+         <div class="info-card">
+         <table style="width: 100%; border: none; border-collapse: separate; border-spacing: 8pt;">
+             <tr>
+                 <td style="width: 25%; border: none; padding: 0; vertical-align: top;">
+                     <div class="metric-box metric-box-blue" style="width: 100%; margin: 0; float: none;">
+                         <span class="metric-value metric-value-blue">{{ concesiones|length }}</span>
+                         <span class="metric-label">Concesiones<br/>Intersectadas</span>
+                     </div>
+                 </td>
+                 <td style="width: 25%; border: none; padding: 0; vertical-align: top;">
+                     <div class="metric-box metric-box-green" style="width: 100%; margin: 0; float: none;">
+                         <span class="metric-value metric-value-green">{{ evidencias|length }}</span>
+                         <span class="metric-label">Puntos GPS<br/>Recolectados</span>
+                     </div>
+                 </td>
+                 <td style="width: 25%; border: none; padding: 0; vertical-align: top;">
+                     <div class="metric-box metric-box-orange" style="width: 100%; margin: 0; float: none;">
+                         <span class="metric-value metric-value-orange">{{ "%.0f"|format(analisis.distancia_buffer) }}m</span>
+                         <span class="metric-label">Distancia de<br/>Buffer</span>
+                     </div>
+                 </td>
+                 <td style="width: 25%; border: none; padding: 0; vertical-align: top;">
+                     <div class="metric-box metric-box-purple" style="width: 100%; margin: 0; float: none;">
+                         <span class="metric-value metric-value-purple">{{ titulares_unicos }}</span>
+                         <span class="metric-label">Titulares<br/>Afectados</span>
+                     </div>
+                 </td>
+             </tr>
+         </table>
+        
+        {% if analisis.observaciones %}
+        <p style="font-style: italic; background-color: white; padding: 8pt; border-left: 3pt solid #4caf50; margin: 8pt 0;">
+            <strong>Observaciones:</strong> {{ analisis.observaciones }}
+        </p>
+        {% endif %}
+    </div>
+
+    <h2>Información de la Denuncia</h2>
+    
+    <div class="info-card">
+        <table>
+            <tr class="row-white">
+                <td class="info-label">ID de Denuncia</td>
+                <td class="info-value font-mono text-primary font-bold">#{{ denuncia.id_denuncia }}</td>
+            </tr>
+            <tr class="row-gray">
+                <td class="info-label">Lugar de Inspección</td>
+                <td class="info-value font-bold text-primary">{{ denuncia.lugar }}</td>
+            </tr>
+            <tr class="row-white">
+                <td class="info-label">Fecha de Inspección</td>
+                <td class="info-value">{{ denuncia.fecha_inspeccion.strftime('%d de %B de %Y a las %H:%M hrs') }}</td>
+            </tr>
+            <tr class="row-gray">
+                <td class="info-label">Fecha de Ingreso</td>
+                <td class="info-value">{{ denuncia.fecha_ingreso.strftime('%d de %B de %Y a las %H:%M hrs') }}</td>
+            </tr>
+            {% if denuncia.observaciones %}
+            <tr class="row-white">
+                <td class="info-label">Observaciones</td>
+                <td class="info-value" style="font-style: italic;">{{ denuncia.observaciones }}</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+
+    {% if concesiones %}
+    <div class="page-break"></div>
+    <h2>Concesiones Intersectadas</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Código Centro</th>
+                <th>Nombre de la Concesión</th>
+                <th>Titular</th>
+                <th>Tipo</th>
+                <th>Región</th>
+                <th class="text-center">Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for concesion in concesiones %}
+            <tr{% if loop.index0 % 2 == 0 %} class="row-white"{% else %} class="row-gray"{% endif %}>
+                <td class="font-mono text-primary">{{ concesion.codigo_centro }}</td>
+                <td class="font-bold">{{ concesion.nombre }}</td>
+                <td>{{ concesion.titular }}</td>
+                <td><span class="badge badge-info">{{ concesion.tipo }}</span></td>
+                <td>{{ concesion.region }}</td>
+                <td class="text-center">
+                    <span class="badge badge-success">Válida</span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if evidencias %}
+    <h2>Evidencias GPS Recolectadas</h2>
+    
+         <p class="text-muted" style="font-style: italic; margin-bottom: 10pt; font-size: 12pt;">
+         Puntos de evidencia georreferenciados durante la inspección de campo
+     </p>
+    
+    {% for evidencia in evidencias %}
+    <div class="evidence-box">
+        <div class="evidence-header">
+            Evidencia #{{ evidencia.id_evidencia }}
+                         <span style="float: right; font-size: 10pt; color: #666;">
+                 {{ evidencia.fecha }} {{ evidencia.hora }}
+             </span>
+        </div>
+        
+        {% if evidencia.coordenadas and evidencia.coordenadas.coordinates %}
+        <div class="evidence-coords">
+            LAT: {{ "%.6f"|format(evidencia.coordenadas.coordinates[1]) }}°<br/>
+            LON: {{ "%.6f"|format(evidencia.coordenadas.coordinates[0]) }}°
+        </div>
+        {% endif %}
+        
+                 <p style="font-size: 11pt; margin: 6pt 0;">
+             {{ evidencia.descripcion or 'Sin descripción disponible' }}
+         </p>
+        
+        {% if evidencia.foto_url %}
+        <span class="badge badge-success">Con fotografía</span>
+        {% endif %}
+    </div>
+    {% endfor %}
+    <div class="clearfix"></div>
+    {% endif %}
+
+    <h2>Parámetros Técnicos del Análisis</h2>
+    
+    <div class="info-card">
+        <table>
+            <tr class="row-white">
+                <td class="info-label">ID de Análisis</td>
+                <td class="info-value font-mono text-primary">#{{ analisis.id_analisis }}</td>
+            </tr>
+            <tr class="row-gray">
+                <td class="info-label">ID de Denuncia Asociada</td>
+                <td class="info-value font-mono">#{{ analisis.id_denuncia }}</td>
+            </tr>
+            <tr class="row-white">
+                <td class="info-label">Método de Análisis</td>
+                <td class="info-value">{{ analisis.metodo or 'Buffer de intersección geoespacial' }}</td>
+            </tr>
+            <tr class="row-gray">
+                <td class="info-label">Distancia de Buffer Aplicada</td>
+                <td class="info-value font-bold">{{ "%.1f"|format(analisis.distancia_buffer) }} metros</td>
+            </tr>
+            <tr class="row-white">
+                <td class="info-label">Fecha y Hora del Análisis</td>
+                <td class="info-value">{{ analisis.fecha_analisis.strftime('%d de %B de %Y a las %H:%M:%S hrs') }}</td>
+            </tr>
+        </table>
+    </div>
+
+    
+
+    <hr class="section-divider" />
+
+    <div class="text-center">
+        <div class="info-card">
+            <h2 style="color: #1976d2; margin-bottom: 6pt;">Sistema de Monitoreo Costero - Playas Limpias</h2>
+                         <p class="text-muted" style="font-size: 11pt;">
+                 <strong>Reporte generado automáticamente</strong><br/>
+                 {{ fecha_generacion.strftime('%d de %B de %Y a las %H:%M:%S hrs') }}<br/>
+                 Para consultas técnicas o aclaraciones, contacte al administrador del sistema.
+             </p>
+        </div>
+    </div>
+</body>
+</html> 
