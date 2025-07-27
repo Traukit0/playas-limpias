@@ -13,6 +13,7 @@ from schemas.analisis import AnalisisCreate, AnalisisResponseGeoJSON, ResultadoA
 from security.auth import verificar_token
 from services.geoprocessing.buffer import generar_buffer_union
 from services.geoprocessing.interseccion import intersectar_concesiones
+from services.map_generator import MapGenerator
 from datetime import datetime
 from typing import List
 import json
@@ -71,6 +72,17 @@ def ejecutar_analisis(data: AnalisisCreate, db: Session = Depends(get_db)):
         ))
 
     db.commit()
+    
+    # Generar mapa estático del análisis
+    try:
+        map_generator = MapGenerator()
+        mapa_path = map_generator.generar_mapa_analisis(nuevo_analisis.id_analisis, db)
+        if mapa_path:
+            logger.info(f"Mapa generado exitosamente para análisis {nuevo_analisis.id_analisis}: {mapa_path}")
+        else:
+            logger.warning(f"No se pudo generar mapa para análisis {nuevo_analisis.id_analisis}")
+    except Exception as e:
+        logger.error(f"Error generando mapa para análisis {nuevo_analisis.id_analisis}: {e}")
 
     buffer_geojson = db.execute(
         text("SELECT ST_AsGeoJSON(buffer_geom) FROM analisis_denuncia WHERE id_analisis = :id"),

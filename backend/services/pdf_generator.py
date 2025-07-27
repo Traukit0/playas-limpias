@@ -188,6 +188,22 @@ class PDFGenerator:
                     }
                     resultados_data.append(resultado_dict)
             
+            # Verificar si existe mapa generado para este análisis
+            mapa_resultados_path = None
+            if analisis and hasattr(analisis, 'id_analisis') and denuncia and hasattr(denuncia, 'id_denuncia'):
+                # Nuevo path: fotos/denuncia_{id_denuncia}/mapa_analisis_{id_analisis}.png
+                mapa_path = Path(FOTOS_DIR) / f"denuncia_{denuncia.id_denuncia}" / f"mapa_analisis_{analisis.id_analisis}.png"
+                if mapa_path.exists():
+                    mapa_resultados_path = str(mapa_path.resolve())
+                    logger.debug(f"✅ Mapa encontrado para análisis {analisis.id_analisis}: {mapa_resultados_path}")
+                else:
+                    logger.warning(f"❌ No se encontró mapa para análisis {analisis.id_analisis}: {mapa_path}")
+                    # También buscar en la ubicación antigua por compatibilidad
+                    mapa_path_old = Path(FOTOS_DIR) / f"analisis_{analisis.id_analisis}" / "mapa_resultados.png"
+                    if mapa_path_old.exists():
+                        mapa_resultados_path = str(mapa_path_old.resolve())
+                        logger.info(f"⚠️ Usando mapa en ubicación antigua: {mapa_resultados_path}")
+            
             # Preparar contexto completo
             context = {
                 'analisis': analisis,
@@ -198,6 +214,7 @@ class PDFGenerator:
                 'usuario': usuario,
                 'estado': estado,
                 'fecha_generacion': datetime.now(),
+                'mapa_resultados_path': mapa_resultados_path,
                 # Filtros personalizados para Jinja2
                 'titulares_unicos': len(set(c.get('titular', '') for c in concesiones_data)) if concesiones_data else 0
             }

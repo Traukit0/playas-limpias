@@ -555,6 +555,49 @@
          </div>
     {% endif %}
 
+    <!-- Mapa de Resultados del Análisis -->
+    {% if mapa_resultados_path %}
+    <div style="page-break-before: auto; margin-top: 20pt;">
+        <h2 style="color: #1976d2; border-bottom: 2pt solid #1976d2; padding-bottom: 6pt; margin-bottom: 16pt;">
+            🗺️ Mapa de Resultados del Análisis
+        </h2>
+        
+        <div class="info-card" style="text-align: center; padding: 16pt;">
+            <p style="font-size: 11pt; color: #666; margin-bottom: 12pt;">
+                Visualización geoespacial del buffer, concesiones intersectadas y evidencias GPS
+            </p>
+            
+            <div style="border: 1pt solid #ddd; display: inline-block; padding: 8pt; background-color: #f9f9f9;">
+                <img src="{{ mapa_resultados_path }}" alt="Mapa de Resultados del Análisis" 
+                     style="max-width: 100%; height: auto; display: block;" width="600" />
+            </div>
+            
+            <div style="margin-top: 12pt; font-size: 9pt; color: #888;">
+                <table style="width: 100%; border: none; font-size: 9pt;">
+                    <tr style="border: none;">
+                        <td style="border: none; text-align: center; padding: 2pt;">
+                            <div style="display: inline-block; width: 12pt; height: 12pt; background-color: #0066ff; border: 1pt solid #004499; margin-right: 4pt; vertical-align: middle;"></div>
+                            Área de Buffer
+                        </td>
+                        <td style="border: none; text-align: center; padding: 2pt;">
+                            <div style="display: inline-block; width: 12pt; height: 12pt; background-color: #ff0000; border: 1pt solid #cc0000; margin-right: 4pt; vertical-align: middle;"></div>
+                            Intersección Válida
+                        </td>
+                        <td style="border: none; text-align: center; padding: 2pt;">
+                            <div style="display: inline-block; width: 12pt; height: 12pt; background-color: #ffa500; border: 1pt solid #cc8400; margin-right: 4pt; vertical-align: middle;"></div>
+                            Intersección No Válida
+                        </td>
+                        <td style="border: none; text-align: center; padding: 2pt;">
+                            <div style="display: inline-block; width: 8pt; height: 8pt; background-color: #0066ff; border-radius: 50%; margin-right: 4pt; vertical-align: middle;"></div>
+                            Evidencias GPS
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <h2>Parámetros Técnicos del Análisis</h2>
     
          <div class="info-card">
