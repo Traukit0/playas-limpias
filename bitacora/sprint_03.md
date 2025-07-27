@@ -17,6 +17,7 @@
 - Algunos endpoints se están extendiendo para que acepten parámetros de query
 - Se agregó herramienta xhtml2pdf y jinja2 para la creación de PDF
 - Se agregó py-staticmaps para generar mapa que vaya insertado en archivo PDF
+- Está lista la creación de PDF, con mapa incorporado
 ---
 
 ### ⚠️ Dificultades encontradas
@@ -36,6 +37,7 @@
 - El filtrado de datos implementado en el endpoint /denuncias se debe replicar en otros endpoints, a fin de tener la data filtrada en el frontend
 - Se debe implementar una lógica para que el backend responda solamente con un polígono cercano a los puntos cuando existan dos (buffers cortados por tierra)
 - Se deben modificar algunos puntos del wizard para mejor experiencia de usuario
+- En el sprint final, se debe reconsiderar eliminar detalles menores de estética al archivo PDF creado
 - 
 
 ---

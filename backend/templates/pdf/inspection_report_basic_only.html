@@ -572,24 +572,32 @@
                      style="max-width: 100%; height: auto; display: block;" width="600" />
             </div>
             
-            <div style="margin-top: 12pt; font-size: 9pt; color: #888;">
-                <table style="width: 100%; border: none; font-size: 9pt;">
+            <!-- Leyenda del mapa -->
+            <div style="margin-top: 12pt;">
+                <h3 style="font-size: 11pt; color: #1976d2; margin-bottom: 10pt; text-align: center; border-bottom: 1pt solid #e0e0e0; padding-bottom: 4pt;">Leyenda</h3>
+                
+                <table style="width: 100%; border: none; font-size: 10pt; background-color: #f8f9fa; padding: 8pt;">
                     <tr style="border: none;">
-                        <td style="border: none; text-align: center; padding: 2pt;">
-                            <div style="display: inline-block; width: 12pt; height: 12pt; background-color: #0066ff; border: 1pt solid #004499; margin-right: 4pt; vertical-align: middle;"></div>
-                            Área de Buffer
+                        <td style="border: none; text-align: center; padding: 8pt; width: 33%;">
+                            <span style="font-size: 16pt; color: #0066ff; font-weight: bold;">■</span>
+                            <br/>
+                            <span style="font-weight: bold; color: #333; font-size: 10pt;">Área de Buffer</span>
+                            <br/>
+                            <span style="font-size: 9pt; color: #666;">({{ "%.0f"|format(analisis.distancia_buffer) }}m)</span>
                         </td>
-                        <td style="border: none; text-align: center; padding: 2pt;">
-                            <div style="display: inline-block; width: 12pt; height: 12pt; background-color: #ff0000; border: 1pt solid #cc0000; margin-right: 4pt; vertical-align: middle;"></div>
-                            Intersección Válida
+                        <td style="border: none; text-align: center; padding: 8pt; width: 33%;">
+                            <span style="font-size: 16pt; color: #ff0000; font-weight: bold;">■</span>
+                            <br/>
+                            <span style="font-weight: bold; color: #333; font-size: 10pt;">Concesiones Intersectadas</span>
+                            <br/>
+                            <span style="font-size: 9pt; color: #666;">({{ resultados|selectattr('interseccion_valida', 'equalto', true)|list|length }} encontradas)</span>
                         </td>
-                        <td style="border: none; text-align: center; padding: 2pt;">
-                            <div style="display: inline-block; width: 12pt; height: 12pt; background-color: #ffa500; border: 1pt solid #cc8400; margin-right: 4pt; vertical-align: middle;"></div>
-                            Intersección No Válida
-                        </td>
-                        <td style="border: none; text-align: center; padding: 2pt;">
-                            <div style="display: inline-block; width: 8pt; height: 8pt; background-color: #0066ff; border-radius: 50%; margin-right: 4pt; vertical-align: middle;"></div>
-                            Evidencias GPS
+                        <td style="border: none; text-align: center; padding: 8pt; width: 33%;">
+                            <span style="font-size: 14pt; color: #0066ff; font-weight: bold;">●</span>
+                            <br/>
+                            <span style="font-weight: bold; color: #333; font-size: 10pt;">Puntos GPS</span>
+                            <br/>
+                            <span style="font-size: 9pt; color: #666;">({{ evidencias|length }} evidencias)</span>
                         </td>
                     </tr>
                 </table>
