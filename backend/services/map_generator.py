@@ -1,5 +1,7 @@
 import os
 import logging
+import tempfile
+import shutil
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
@@ -16,6 +18,13 @@ except ImportError:
     STATICMAPS_AVAILABLE = False
     logger.warning("py-staticmaps no está instalado. La generación de mapas estará deshabilitada.")
 
+try:
+    from PIL import Image, ImageDraw, ImageFont
+    PILLOW_AVAILABLE = True
+except ImportError:
+    PILLOW_AVAILABLE = False
+    logger.warning("Pillow no está disponible para generar marcadores personalizados.")
+
 from config import FOTOS_DIR
 
 class MapGenerator:
@@ -28,12 +37,120 @@ class MapGenerator:
         self.fotos_dir = Path(FOTOS_DIR)
         self.map_width = 1024
         self.map_height = 900
+        self.temp_markers = []  # Lista para mantener track de marcadores temporales
+
         logger.info(f"MapGenerator inicializado. FOTOS_DIR: {self.fotos_dir}")
         logger.info(f"STATICMAPS_AVAILABLE: {STATICMAPS_AVAILABLE}")
+        logger.info(f"PILLOW_AVAILABLE: {PILLOW_AVAILABLE}")
         if STATICMAPS_AVAILABLE:
             logger.info("✅ py-staticmaps está disponible")
         else:
             logger.error("❌ py-staticmaps NO está disponible")
+    
+    def _crear_marcador_codigo_centro(self, codigo_centro: str, interseccion_valida: bool) -> Optional[str]:
+        """
+        Crea una imagen PNG personalizada con el código de centro para usar como marcador.
+        
+        Args:
+            codigo_centro: El código del centro de cultivo
+            interseccion_valida: Si la intersección es válida (para definir colores)
+            
+        Returns:
+            Path absoluto al archivo de imagen temporal o None si falla
+        """
+        if not PILLOW_AVAILABLE:
+            logger.warning("Pillow no disponible, no se puede crear marcador personalizado")
+            return None
+            
+        try:
+            # Configurar colores según validez
+            if interseccion_valida:
+                bg_color = "#FF0000"  # Rojo para válidas
+                text_color = "#FFFFFF"  # Texto blanco
+            else:
+                bg_color = "#FFA500"  # Naranja para no válidas
+                text_color = "#000000"  # Texto negro
+            
+            # Configurar dimensiones del marcador (un poco más grande para mejor legibilidad)
+            width, height = 70, 28
+            border_radius = 4
+            
+            # Crear imagen con transparencia
+            img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(img)
+            
+            # Dibujar rectángulo redondeado como fondo
+            draw.rounded_rectangle(
+                [(0, 0), (width-1, height-1)], 
+                radius=border_radius, 
+                fill=bg_color, 
+                outline="#000000", 
+                width=1
+            )
+            
+            # Truncar código si es muy largo
+            codigo_display = codigo_centro[:8] if len(codigo_centro) > 8 else codigo_centro
+            
+            # Intentar usar una fuente del sistema con tamaño más grande
+            try:
+                # Intentar fuente Arial/DejaVu en tamaño 12 para mejor visibilidad
+                font = ImageFont.truetype("arial.ttf", 12)
+            except:
+                try:
+                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 12)
+                except:
+                    try:
+                        # Fuente por defecto con tamaño aumentado si es posible
+                        font = ImageFont.load_default()
+                    except:
+                        font = None
+            
+            # Calcular posición del texto para centrarlo
+            if font:
+                bbox = draw.textbbox((0, 0), codigo_display, font=font)
+                text_width = bbox[2] - bbox[0]
+                text_height = bbox[3] - bbox[1]
+            else:
+                # Estimación si no hay fuente disponible
+                text_width = len(codigo_display) * 6
+                text_height = 10
+            
+            text_x = (width - text_width) // 2
+            text_y = (height - text_height) // 2
+            
+            # Dibujar texto
+            draw.text((text_x, text_y), codigo_display, fill=text_color, font=font)
+            
+            # Crear archivo temporal
+            temp_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+            temp_path = temp_file.name
+            temp_file.close()
+            
+            # Guardar imagen
+            img.save(temp_path, 'PNG')
+            
+            # Agregar a lista para limpieza posterior
+            self.temp_markers.append(temp_path)
+            
+            logger.debug(f"Marcador personalizado creado: {temp_path} para código {codigo_centro}")
+            return temp_path
+            
+        except Exception as e:
+            logger.error(f"Error creando marcador personalizado para {codigo_centro}: {e}")
+            return None
+    
+    def _limpiar_marcadores_temporales(self):
+        """
+        Limpia los archivos temporales de marcadores personalizados.
+        """
+        for temp_path in self.temp_markers:
+            try:
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+                    logger.debug(f"Archivo temporal eliminado: {temp_path}")
+            except Exception as e:
+                logger.warning(f"No se pudo eliminar archivo temporal {temp_path}: {e}")
+        self.temp_markers.clear()
         
     def generar_mapa_analisis(self, id_analisis: int, db: Session) -> Optional[str]:
         """
@@ -85,8 +202,6 @@ class MapGenerator:
             # Renderizar mapa
             mapa_path = denuncia_dir / f"mapa_analisis_{id_analisis}.png"
             
-            # py-staticmaps calcula automáticamente el mejor zoom y centro
-            # para ajustarse a todos los elementos agregados
             image = context.render_pillow(self.map_width, self.map_height)
             image.save(str(mapa_path))
             
@@ -94,13 +209,19 @@ class MapGenerator:
             if mapa_path.exists():
                 size_mb = mapa_path.stat().st_size / (1024 * 1024)
                 logger.info(f"✅ Mapa generado exitosamente: {mapa_path} ({size_mb:.2f} MB)")
-                return str(mapa_path)
+                resultado = str(mapa_path)
             else:
                 logger.error(f"❌ Error: El archivo no se guardó correctamente")
-                return None
+                resultado = None
+            
+            # Limpiar marcadores temporales
+            self._limpiar_marcadores_temporales()
+            return resultado
             
         except Exception as e:
             logger.error(f"Error generando mapa para análisis {id_analisis}: {e}")
+            # Limpiar marcadores temporales en caso de error
+            self._limpiar_marcadores_temporales()
             return None
     
     def _obtener_datos_analisis(self, db: Session, id_analisis: int) -> Optional[Dict[str, Any]]:
@@ -220,16 +341,37 @@ class MapGenerator:
                 elif geom['type'] == 'Polygon':
                     self._agregar_poligono_simple(context, geom['coordinates'], color, fill_color)
                     
-                # Agregar marcador con código de centro
+                # Agregar marcador personalizado con código de centro
                 centroide = self._calcular_centroide(geom)
-                if centroide:
-                    # Marcador invisible para el texto (simulamos tooltip)
-                    marker = staticmaps.Marker(
-                        staticmaps.create_latlng(centroide[1], centroide[0]),
-                        color=staticmaps.WHITE,
-                        size=1
+                if centroide and concesion.get('codigo_centro'):
+                    codigo_centro = str(concesion['codigo_centro'])
+                    
+                    # Crear marcador personalizado con el código de centro
+                    marker_path = self._crear_marcador_codigo_centro(
+                        codigo_centro, 
+                        concesion['interseccion_valida']
                     )
-                    context.add_object(marker)
+                    
+                    if marker_path:
+                        # Usar ImageMarker con la imagen personalizada
+                        marker = staticmaps.ImageMarker(
+                            staticmaps.create_latlng(centroide[1], centroide[0]),
+                            marker_path,
+                            origin_x=35,  # Centro horizontal de la imagen (70px / 2)
+                            origin_y=14   # Centro vertical de la imagen (28px / 2)
+                        )
+                        context.add_object(marker)
+                        logger.debug(f"Marcador personalizado agregado para concesión {codigo_centro}")
+                    else:
+                        # Fallback: usar marcador básico si falla la creación del personalizado
+                        marker_color = staticmaps.RED if concesion['interseccion_valida'] else staticmaps.parse_color("#FFA500")
+                        marker = staticmaps.Marker(
+                            staticmaps.create_latlng(centroide[1], centroide[0]),
+                            color=marker_color,
+                            size=8
+                        )
+                        context.add_object(marker)
+                        logger.warning(f"Usando marcador básico para concesión {codigo_centro} (fallback)")
                     
             except Exception as e:
                 logger.error(f"Error agregando concesión {concesion.get('id_concesion', 'unknown')}: {e}")
