@@ -5,6 +5,7 @@ import logging
 from datetime import datetime
 import os
 from pathlib import Path
+from config import FOTOS_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,81 @@ class PDFGenerator:
             logger.error(f"Error generando PDF para análisis {analisis.id_analisis}: {str(e)}")
             raise
     
+    def _convertir_a_ruta_local(self, foto_url):
+        """
+        Convierte la foto_url a una ruta de archivo local absoluta para xhtml2pdf.
+        
+        xhtml2pdf funciona mejor con rutas de archivos locales que con URLs HTTP.
+        Este método es escalable y funciona tanto en desarrollo como en producción.
+        
+        Args:
+            foto_url (str): URL o ruta relativa de la foto
+            
+        Returns:
+            str: Ruta absoluta del archivo local, o None si no existe
+        """
+        if not foto_url or foto_url.strip() == '':
+            return None
+            
+        # Limpiar la entrada
+        foto_url = foto_url.strip()
+        
+        # Obtener la ruta base del directorio de fotos desde configuración
+        fotos_base_path = Path(FOTOS_DIR).resolve()
+        
+        # Caso 1: Ruta que empieza con /fotos/ (formato API)
+        if foto_url.startswith('/fotos/'):
+            ruta_relativa = foto_url[7:]  # Eliminar '/fotos/'
+            ruta_completa = fotos_base_path / ruta_relativa
+        
+        # Caso 2: Ruta que empieza con fotos/ (formato directo)
+        elif foto_url.startswith('fotos/'):
+            ruta_relativa = foto_url[6:]  # Eliminar 'fotos/'
+            ruta_completa = fotos_base_path / ruta_relativa
+        
+        # Caso 3: Ya es una ruta absoluta del sistema de archivos
+        elif os.path.isabs(foto_url):
+            ruta_completa = Path(foto_url).resolve()
+        
+        # Caso 4: URL HTTP completa (convertir a ruta local si es del mismo servidor)
+        elif foto_url.startswith(('http://', 'https://')):
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(foto_url)
+                if parsed.path.startswith('/fotos/'):
+                    ruta_relativa = parsed.path[7:]  # Eliminar '/fotos/'
+                    ruta_completa = fotos_base_path / ruta_relativa
+                else:
+                    logger.warning(f"URL externa no soportada para PDF: {foto_url}")
+                    return None
+            except Exception as e:
+                logger.error(f"Error procesando URL {foto_url}: {e}")
+                return None
+        
+        # Caso 5: Cualquier otro formato, asumir ruta relativa dentro de fotos/
+        else:
+            ruta_completa = fotos_base_path / foto_url
+        
+        # Verificar que el archivo existe y está dentro del directorio permitido
+        try:
+            ruta_completa = ruta_completa.resolve()
+            
+            # Verificación de seguridad: el archivo debe estar dentro del directorio de fotos
+            if not str(ruta_completa).startswith(str(fotos_base_path)):
+                logger.warning(f"Ruta de foto fuera del directorio permitido: {ruta_completa}")
+                return None
+            
+            if ruta_completa.exists() and ruta_completa.is_file():
+                logger.debug(f"Foto encontrada: {ruta_completa}")
+                return str(ruta_completa)
+            else:
+                logger.warning(f"Archivo de foto no encontrado: {ruta_completa}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error resolviendo ruta de foto {foto_url}: {e}")
+            return None
+
     def _prepare_template_context(self, analisis, denuncia, evidencias, resultados, concesiones, usuario, estado):
         """
         Preparar el contexto de datos para el template Jinja2
@@ -82,7 +158,7 @@ class PDFGenerator:
                         'fecha': evidencia.fecha.strftime('%d/%m/%Y') if evidencia.fecha else 'N/A',
                         'hora': evidencia.hora.strftime('%H:%M:%S') if evidencia.hora else 'N/A',
                         'descripcion': evidencia.descripcion or '',
-                        'foto_url': evidencia.foto_url or '',
+                        'foto_url': self._convertir_a_ruta_local(evidencia.foto_url),
                         'coordenadas': evidencia.coordenadas if hasattr(evidencia, 'coordenadas') else None
                     }
                     evidencias_data.append(evidencia_dict)
