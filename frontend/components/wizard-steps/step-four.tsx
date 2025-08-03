@@ -2,6 +2,7 @@
 
 import React from "react"
 import { useState, useEffect } from "react"
+import { useAuth } from "@/hooks/use-auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -9,7 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { MapPin, ImageIcon, FileText, Play, CheckCircle, User, AlertCircle, Info } from "lucide-react"
 import { AnalysisMap } from "@/components/analysis-map"
 import type { InspectionData } from "@/components/inspection-wizard"
-import { API_TOKEN, API_BASE_URL } from "./step-one"
+import { API_BASE_URL } from "./step-one"
 import { MapContainer, TileLayer, Marker, GeoJSON, Popup, useMap, Tooltip } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import { useRef } from "react"
@@ -97,557 +98,626 @@ function getPolygonCentroid(geojson: any): L.LatLng | null {
   return latlng;
 }
 
-// Componente auxiliar para crear panes personalizados
 function CustomPanes() {
-  const map = useMap();
-  const panesCreated = useRef(false);
-  React.useEffect(() => {
-    if (!panesCreated.current) {
-      if (!map.getPane('bufferPane')) {
-        map.createPane('bufferPane');
-        map.getPane('bufferPane')!.style.zIndex = '410';
-      }
-      if (!map.getPane('selectedPane')) {
-        map.createPane('selectedPane');
-        map.getPane('selectedPane')!.style.zIndex = '420';
-      }
-      panesCreated.current = true;
-    }
-  }, [map]);
-  return null;
+  const map = useMap()
+  useEffect(() => {
+    // Crear paneles personalizados para el mapa
+    const bufferPane = map.createPane('buffer')
+    bufferPane.style.zIndex = '400'
+    bufferPane.style.pointerEvents = 'none'
+    
+    const concesionPane = map.createPane('concesion')
+    concesionPane.style.zIndex = '500'
+    concesionPane.style.pointerEvents = 'auto'
+  }, [map])
+  return null
 }
 
 export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [analysisComplete, setAnalysisComplete] = useState(data.analysisComplete)
-  const [analysisExecuted, setAnalysisExecuted] = useState(false)
+  const { token, isAuthenticated } = useAuth()
   
-  // Estados para datos de usuario y estado
+  const [evidencias, setEvidencias] = useState<Evidencia[]>([])
   const [usuario, setUsuario] = useState<Usuario | null>(null)
   const [estado, setEstado] = useState<EstadoDenuncia | null>(null)
-  const [evidencias, setEvidencias] = useState<Evidencia[]>([])
-  const [loadingData, setLoadingData] = useState(true)
-  const [errorData, setErrorData] = useState<string | null>(null)
-
   const [concesiones, setConcesiones] = useState<Concesion[]>([])
-  const [loadingConcesiones, setLoadingConcesiones] = useState(true)
-  const [errorConcesiones, setErrorConcesiones] = useState<string | null>(null)
-
-  const [bufferInput, setBufferInput] = useState<number | undefined>(undefined)
-  const [bufferPreview, setBufferPreview] = useState<number | undefined>(undefined)
   const [previewData, setPreviewData] = useState<PreviewResponse | null>(null)
-  const [loadingPreview, setLoadingPreview] = useState(false)
-  const [errorPreview, setErrorPreview] = useState<string | null>(null)
+  const [bufferDistance, setBufferDistance] = useState<number>(100)
+  const [loading, setLoading] = useState(false)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [analysisExecuted, setAnalysisExecuted] = useState(false)
 
-  // Cargar datos de usuario, estado y evidencias cuando el componente se monta
   useEffect(() => {
-    const cargarDatos = async () => {
-      setLoadingData(true)
-      setErrorData(null)
-      
-      try {
-        // Cargar datos del usuario si existe id_usuario
-        if (data.id_usuario) {
-          const usuarioRes = await fetch(`${API_BASE_URL}/usuarios/?id_usuario=${data.id_usuario}`, {
-            headers: { Authorization: `Bearer ${API_TOKEN}` }
-          })
-          
-          if (usuarioRes.ok) {
-            const usuarios = await usuarioRes.json()
-            if (usuarios.length > 0) {
-              setUsuario(usuarios[0])
-            }
-          } else {
-            console.error('Error cargando usuario:', usuarioRes.status)
-          }
-        }
-
-        // Cargar datos del estado si existe id_estado
-        if (data.id_estado) {
-          const estadoRes = await fetch(`${API_BASE_URL}/estados_denuncia/?id_estado=${data.id_estado}`, {
-            headers: { Authorization: `Bearer ${API_TOKEN}` }
-          })
-          
-          if (estadoRes.ok) {
-            const estados = await estadoRes.json()
-            if (estados.length > 0) {
-              setEstado(estados[0])
-            }
-          } else {
-            console.error('Error cargando estado:', estadoRes.status)
-          }
-        }
-
-        // Cargar evidencias GPS si existe id_denuncia
-        if (data.id_denuncia) {
-          const evidenciasRes = await fetch(`${API_BASE_URL}/evidencias/?id_denuncia=${data.id_denuncia}`, {
-            headers: { Authorization: `Bearer ${API_TOKEN}` }
-          })
-          
-          if (evidenciasRes.ok) {
-            const evidenciasData = await evidenciasRes.json()
-            setEvidencias(evidenciasData)
-          } else {
-            console.error('Error cargando evidencias:', evidenciasRes.status)
-          }
-        }
-      } catch (error) {
-        console.error('Error al cargar datos:', error)
-        setErrorData('Error al cargar información de la denuncia')
-      } finally {
-        setLoadingData(false)
-      }
+    if (isAuthenticated && token && data.id_denuncia) {
+      cargarDatos()
     }
+  }, [isAuthenticated, token, data.id_denuncia])
 
-    cargarDatos()
-  }, [data.id_usuario, data.id_estado, data.id_denuncia])
-
-  // Cargar concesiones al montar
-  useEffect(() => {
-    const cargarConcesiones = async () => {
-      setLoadingConcesiones(true)
-      setErrorConcesiones(null)
-      try {
-        const res = await fetch(`${API_BASE_URL}/concesiones`, {
-          headers: { Authorization: `Bearer ${API_TOKEN}` }
-        })
-        if (!res.ok) throw new Error("Error al cargar concesiones")
-        const data = await res.json()
-        setConcesiones(data)
-      } catch (err: any) {
-        setErrorConcesiones(err.message || "Error inesperado")
-      } finally {
-        setLoadingConcesiones(false)
-      }
-    }
-    cargarConcesiones()
-  }, [])
-
-  // Función para llamar a /analisis/preview
-  const handlePreview = async () => {
-    setLoadingPreview(true)
-    setErrorPreview(null)
+  const cargarDatos = async () => {
+    if (!isAuthenticated || !token) return
+    
+    setLoading(true)
+    setError(null)
     try {
-      const res = await fetch(`${API_BASE_URL}/analisis/preview`, {
+      // Función para hacer fetch con mejor manejo de errores
+      const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 10000) => {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+        try {
+          const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+          })
+          clearTimeout(timeoutId)
+          return response
+        } catch (error) {
+          clearTimeout(timeoutId)
+          throw error
+        }
+      }
+
+      // Función para probar múltiples URLs de la API
+      const tryApiUrls = async (endpoint: string, options: RequestInit) => {
+        const urls = [
+          'http://localhost:8000',
+          'http://backend:8000',
+          'http://host.docker.internal:8000'
+        ]
+
+        for (const baseUrl of urls) {
+          try {
+            console.log(`Probando URL para datos: ${baseUrl}${endpoint}`)
+            const res = await fetchWithTimeout(`${baseUrl}${endpoint}`, options)
+
+            if (res.ok) {
+              console.log(`URL exitosa para datos: ${baseUrl}`)
+              return res
+            }
+          } catch (error) {
+            console.log(`URL falló para datos: ${baseUrl}`, error)
+            continue
+          }
+        }
+
+        throw new Error('No se pudo conectar a ninguna URL de la API')
+      }
+
+      // Cargar evidencias
+      const evidenciasRes = await tryApiUrls(`/evidencias/?id_denuncia=${data.id_denuncia}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (evidenciasRes.ok) {
+        const evidenciasData = await evidenciasRes.json()
+        setEvidencias(evidenciasData)
+      }
+
+      // Cargar usuario
+      const usuarioRes = await tryApiUrls(`/usuarios/${data.id_usuario}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (usuarioRes.ok) {
+        const usuarioData = await usuarioRes.json()
+        setUsuario(usuarioData)
+      }
+
+      // Cargar estado
+      const estadoRes = await tryApiUrls(`/estados_denuncia/${data.id_estado}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (estadoRes.ok) {
+        const estadoData = await estadoRes.json()
+        setEstado(estadoData)
+      }
+
+      // Cargar concesiones
+      await cargarConcesiones()
+    } catch (error) {
+      console.error('Error cargando datos:', error)
+      setError("Error al cargar los datos de la inspección")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const cargarConcesiones = async () => {
+    if (!isAuthenticated || !token) return
+    
+    try {
+      // Función para hacer fetch con mejor manejo de errores
+      const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 10000) => {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+        try {
+          const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+          })
+          clearTimeout(timeoutId)
+          return response
+        } catch (error) {
+          clearTimeout(timeoutId)
+          throw error
+        }
+      }
+
+      // Función para probar múltiples URLs de la API
+      const tryApiUrls = async (endpoint: string, options: RequestInit) => {
+        const urls = [
+          'http://localhost:8000',
+          'http://backend:8000',
+          'http://host.docker.internal:8000'
+        ]
+
+        for (const baseUrl of urls) {
+          try {
+            console.log(`Probando URL para concesiones: ${baseUrl}${endpoint}`)
+            const res = await fetchWithTimeout(`${baseUrl}${endpoint}`, options)
+
+            if (res.ok) {
+              console.log(`URL exitosa para concesiones: ${baseUrl}`)
+              return res
+            }
+          } catch (error) {
+            console.log(`URL falló para concesiones: ${baseUrl}`, error)
+            continue
+          }
+        }
+
+        throw new Error('No se pudo conectar a ninguna URL de la API')
+      }
+
+      const concesionesRes = await tryApiUrls('/concesiones/', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (concesionesRes.ok) {
+        const concesionesData = await concesionesRes.json()
+        setConcesiones(concesionesData)
+      }
+    } catch (error) {
+      console.error('Error cargando concesiones:', error)
+    }
+  }
+
+  const handlePreview = async () => {
+    if (!isAuthenticated || !token) {
+      setError("Debe iniciar sesión para continuar")
+      return
+    }
+    
+    setPreviewLoading(true)
+    setError(null)
+    try {
+      // Función para hacer fetch con mejor manejo de errores
+      const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 10000) => {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+        try {
+          const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+          })
+          clearTimeout(timeoutId)
+          return response
+        } catch (error) {
+          clearTimeout(timeoutId)
+          throw error
+        }
+      }
+
+      // Función para probar múltiples URLs de la API
+      const tryApiUrls = async (endpoint: string, options: RequestInit) => {
+        const urls = [
+          'http://localhost:8000',
+          'http://backend:8000',
+          'http://host.docker.internal:8000'
+        ]
+
+        for (const baseUrl of urls) {
+          try {
+            console.log(`Probando URL para preview: ${baseUrl}${endpoint}`)
+            const res = await fetchWithTimeout(`${baseUrl}${endpoint}`, options)
+
+            if (res.ok) {
+              console.log(`URL exitosa para preview: ${baseUrl}`)
+              return res
+            }
+          } catch (error) {
+            console.log(`URL falló para preview: ${baseUrl}`, error)
+            continue
+          }
+        }
+
+        throw new Error('No se pudo conectar a ninguna URL de la API')
+      }
+
+      const res = await tryApiUrls('/analisis/preview', {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${API_TOKEN}`,
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
           id_denuncia: data.id_denuncia,
-          distancia_buffer: bufferInput,
+          distancia_buffer: bufferDistance
         }),
       })
-      if (!res.ok) throw new Error("Error al obtener previsualización")
-      const json = await res.json()
-      setPreviewData({ ...json, distancia_buffer: bufferInput! })
-      setBufferPreview(bufferInput)
-    } catch (err: any) {
-      setErrorPreview(err.message || "Error inesperado")
-      setPreviewData(null)
+
+      if (!res.ok) {
+        const errorText = await res.text()
+        throw new Error(`Error ${res.status}: ${res.statusText} - ${errorText}`)
+      }
+
+      const previewData = await res.json()
+      setPreviewData(previewData)
+    } catch (e: any) {
+      console.error('Error en preview:', e)
+      if (e.name === 'AbortError') {
+        setError("Timeout: El servidor no respondió en el tiempo esperado")
+      } else if (e.message.includes('Failed to fetch')) {
+        setError("Error de conectividad: No se puede conectar al servidor. Verifique que el backend esté ejecutándose.")
+      } else {
+        setError(e.message || "Error al generar preview")
+      }
     } finally {
-      setLoadingPreview(false)
+      setPreviewLoading(false)
     }
   }
 
   const handleAnalysisConfirmation = async () => {
-    setIsAnalyzing(true)
-    setAnalysisExecuted(true)
-
+    if (!isAuthenticated || !token) {
+      setError("Debe iniciar sesión para continuar")
+      return
+    }
+    
+    setLoading(true)
+    setError(null)
     try {
-      // Ejecutar análisis real enviando datos a la base de datos
-      const response = await fetch(`${API_BASE_URL}/analisis`, {
+      // Función para hacer fetch con mejor manejo de errores
+      const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 10000) => {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+        try {
+          const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+          })
+          clearTimeout(timeoutId)
+          return response
+        } catch (error) {
+          clearTimeout(timeoutId)
+          throw error
+        }
+      }
+
+      // Función para probar múltiples URLs de la API
+      const tryApiUrls = async (endpoint: string, options: RequestInit) => {
+        const urls = [
+          'http://localhost:8000',
+          'http://backend:8000',
+          'http://host.docker.internal:8000'
+        ]
+
+        for (const baseUrl of urls) {
+          try {
+            console.log(`Probando URL para análisis: ${baseUrl}${endpoint}`)
+            const res = await fetchWithTimeout(`${baseUrl}${endpoint}`, options)
+
+            if (res.ok) {
+              console.log(`URL exitosa para análisis: ${baseUrl}`)
+              return res
+            }
+          } catch (error) {
+            console.log(`URL falló para análisis: ${baseUrl}`, error)
+            continue
+          }
+        }
+
+        throw new Error('No se pudo conectar a ninguna URL de la API')
+      }
+
+      const res = await tryApiUrls('/analisis/ejecutar', {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${API_TOKEN}`,
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
           id_denuncia: data.id_denuncia,
-          distancia_buffer: bufferPreview || 0,
-          metodo: "buffer_analysis",
-          observaciones: data.observations || "Análisis automático generado desde la aplicación web"
+          distancia_buffer: bufferDistance
         }),
       })
 
-      if (!response.ok) {
-        throw new Error(`Error en el análisis: ${response.status}`)
+      if (!res.ok) {
+        const errorText = await res.text()
+        throw new Error(`Error ${res.status}: ${res.statusText} - ${errorText}`)
       }
 
-      const analysisResult = await response.json()
-
-      // Obtener información completa de las concesiones intersectadas
-      const concesionesSeleccionadas = concesiones.filter(c => 
-        analysisResult.resultados.some((r: any) => r.id_concesion === c.id_concesion)
-      )
-
-      // Guardar todos los resultados del análisis en los datos del wizard
-      updateData({ 
-        analysisResults: {
-          id_analisis: analysisResult.id_analisis,
-          fecha_analisis: analysisResult.fecha_analisis,
-          buffer_distance: analysisResult.distancia_buffer,
-          metodo: analysisResult.metodo,
-          observaciones: analysisResult.observaciones,
-          intersected_concessions: analysisResult.resultados,
-          concessions_data: concesionesSeleccionadas,
-          buffer_geom: analysisResult.buffer_geom
-        }
-      })
-
-      setAnalysisComplete(true)
-      updateData({ analysisComplete: true })
-
-    } catch (error) {
-      console.error('Error durante el análisis:', error)
-      setErrorPreview(error instanceof Error ? error.message : 'Error inesperado durante el análisis')
-      setIsAnalyzing(false)
-      setAnalysisExecuted(false)
+      const analysisResult = await res.json()
+      setAnalysisExecuted(true)
+      onNext()
+    } catch (e: any) {
+      console.error('Error en análisis:', e)
+      if (e.name === 'AbortError') {
+        setError("Timeout: El servidor no respondió en el tiempo esperado")
+      } else if (e.message.includes('Failed to fetch')) {
+        setError("Error de conectividad: No se puede conectar al servidor. Verifique que el backend esté ejecutándose.")
+      } else {
+        setError(e.message || "Error al ejecutar análisis")
+      }
     } finally {
-      setIsAnalyzing(false)
+      setLoading(false)
     }
   }
 
-  // Calcular centro del mapa (usar primer evidencia si existe, si no fallback a [0,0])
-  const centro: [number, number] =
-    evidencias.length > 0 && evidencias[0].coordenadas && Array.isArray(evidencias[0].coordenadas.coordinates)
-      ? [evidencias[0].coordenadas.coordinates[1], evidencias[0].coordenadas.coordinates[0]]
-      : [-41.4689, -72.9411] // fallback: Puerto Montt
-
-  // IDs de concesiones intersectadas
-  const idsConcesionesIntersectadas = previewData?.resultados.map(r => r.id_concesion) || []
+  // Mostrar mensaje si no está autenticado
+  if (!isAuthenticated) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Acceso Requerido</CardTitle>
+          <CardDescription>Debe iniciar sesión para continuar</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            Por favor, inicie sesión para continuar con la inspección.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Análisis de Datos</CardTitle>
-        <CardDescription>Revise los datos ingresados y ejecute el análisis de la inspección</CardDescription>
+        <CardTitle>Análisis de Concesiones</CardTitle>
+        <CardDescription>
+          Configure y ejecute el análisis de concesiones marítimas
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Cartillas de información */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-lg border p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <FileText className="h-5 w-5 text-primary" />
-              <h4 className="font-medium">Información General</h4>
-            </div>
-            <div className="space-y-1 text-sm">
-              <p>
-                <span className="text-muted-foreground">Sector:</span> {data.sectorName}
-              </p>
-              <p>
-                <span className="text-muted-foreground">Fecha:</span> {data.inspectionDate}
-              </p>
-              <p>
-                <span className="text-muted-foreground">Inspector:</span>{" "}
-                {loadingData ? (
-                  <span className="text-muted-foreground">Cargando...</span>
-                ) : usuario ? (
-                  <span className="flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    {usuario.nombre}
-                  </span>
-                ) : (
-                  <span className="text-destructive flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    No disponible
-                  </span>
-                )}
-              </p>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-sm">Estado:</span>
-                {loadingData ? (
-                  <span className="text-muted-foreground text-sm">Cargando...</span>
-                ) : estado ? (
-                  <Badge variant="outline" className="text-xs">
-                    {estado.estado}
-                  </Badge>
-                ) : (
-                  <span className="text-destructive flex items-center gap-1 text-sm">
-                    <AlertCircle className="h-3 w-3" />
-                    No disponible
-                  </span>
-                )}
+        {/* Resumen de la inspección */}
+        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+          <h3 className="font-semibold text-lg">Resumen de la Inspección</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center gap-2">
+              <User className="h-5 w-5 text-blue-600" />
+              <div>
+                <p className="text-sm text-gray-600">Inspector</p>
+                <p className="font-medium">{usuario?.nombre || "Cargando..."}</p>
               </div>
             </div>
-            {errorData && (
-              <div className="mt-2 text-xs text-destructive flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errorData}
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-green-600" />
+              <div>
+                <p className="text-sm text-gray-600">Puntos GPS</p>
+                <p className="font-medium">{evidencias.length} puntos</p>
               </div>
-            )}
-          </div>
-
-          <div className="rounded-lg border p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <MapPin className="h-5 w-5 text-primary" />
-              <h4 className="font-medium">Datos GPS</h4>
             </div>
-            <div className="space-y-1 text-sm">
-              <p>
-                <span className="text-muted-foreground">Archivo:</span> {data.gpxFile?.name}
-              </p>
-              <p>
-                <span className="text-muted-foreground">Waypoints:</span>{" "}
-                {loadingData ? (
-                  <span className="text-muted-foreground">Cargando...</span>
-                ) : evidencias.length > 0 ? (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    {evidencias.length} puntos
-                  </span>
-                ) : (
-                  <span className="text-destructive flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    No disponible
-                  </span>
-                )}
-              </p>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">
-                  {loadingData ? "Verificando..." : evidencias.length > 0 ? "GPX Válido" : "Sin datos"}
-                </Badge>
+            <div className="flex items-center gap-2">
+              <ImageIcon className="h-5 w-5 text-purple-600" />
+              <div>
+                <p className="text-sm text-gray-600">Fotos</p>
+                <p className="font-medium">{evidencias.filter(e => e.foto_url).length} fotos</p>
               </div>
             </div>
           </div>
+          {estado && (
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">{estado.estado}</Badge>
+            </div>
+          )}
+        </div>
 
-          <div className="rounded-lg border p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <ImageIcon className="h-5 w-5 text-primary" />
-              <h4 className="font-medium">Fotografías</h4>
-            </div>
-            <div className="space-y-1 text-sm">
-              <p>
-                <span className="text-muted-foreground">Total:</span>{" "}
-                {loadingData ? (
-                  <span className="text-muted-foreground">Cargando...</span>
-                ) : data.photos && data.photos.length > 0 ? (
-                  <span className="flex items-center gap-1">
-                    <ImageIcon className="h-3 w-3" />
-                    {data.photos.length} fotos
-                  </span>
-                ) : (
-                  <span className="text-destructive flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    No disponible
-                  </span>
-                )}
-              </p>
-              <p>
-                <span className="text-muted-foreground">Tamaño:</span>{" "}
-                {loadingData ? (
-                  <span className="text-muted-foreground">Calculando...</span>
-                ) : data.photos && data.photos.length > 0 ? (
-                  <span>
-                    {(data.photos.reduce((acc, photo) => acc + (photo.size || 0), 0) / 1024 / 1024).toFixed(1)} MB
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">-</span>
-                )}
-              </p>
-              <p>
-                <span className="text-muted-foreground">Evidencias con fotos:</span>{" "}
-                {loadingData ? (
-                  <span className="text-muted-foreground">Verificando...</span>
-                ) : evidencias.length > 0 ? (
-                  <span>
-                    {evidencias.filter(e => e.foto_url).length} de {evidencias.length}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">-</span>
-                )}
-              </p>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">
-                  {loadingData ? "Verificando..." : 
-                   data.photos && data.photos.length > 0 ? "Listo para análisis" : 
-                   "Sin fotografías"}
-                </Badge>
-              </div>
-            </div>
+        {/* Configuración del análisis */}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Distancia del Buffer (metros)
+            </label>
+            <input
+              type="number"
+              value={bufferDistance}
+              onChange={(e) => setBufferDistance(Number(e.target.value))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              min="10"
+              max="1000"
+              step="10"
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              Radio alrededor de los puntos GPS para buscar concesiones
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              onClick={handlePreview}
+              disabled={previewLoading || loading}
+              variant="outline"
+            >
+              {previewLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                  Generando Preview...
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4 mr-2" />
+                  Generar Preview
+                </>
+              )}
+            </Button>
           </div>
         </div>
 
-        {/* Observaciones */}
-        {data.observations && (
-          <div className="rounded-lg border p-4">
-            <h4 className="font-medium mb-2">Observaciones</h4>
-            <p className="text-sm text-muted-foreground">{data.observations}</p>
+        {/* Mapa de análisis */}
+        {evidencias.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg">Mapa de Análisis</h3>
+            <div className="h-[400px] border rounded-lg overflow-hidden">
+              <MapContainer
+                style={{ height: "100%", width: "100%" }}
+                center={[-42.8333, -73.2500]}
+                zoom={10}
+                scrollWheelZoom={true}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution="&copy; OpenStreetMap contributors"
+                />
+                <CustomPanes />
+                <FitBoundsToEvidencias evidencias={evidencias} />
+                
+                {/* Evidencias */}
+                {evidencias.map((evidencia) => {
+                  if (!evidencia.coordenadas || !Array.isArray(evidencia.coordenadas.coordinates)) {
+                    return null
+                  }
+                  const [lng, lat] = evidencia.coordenadas.coordinates
+                  return (
+                    <Marker key={evidencia.id_evidencia} position={[lat, lng]}>
+                      <Popup>
+                        <div className="text-sm">
+                          <p><strong>Punto #{evidencia.id_evidencia}</strong></p>
+                          <p>Fecha: {evidencia.fecha}</p>
+                          <p>Hora: {evidencia.hora}</p>
+                          {evidencia.descripcion && (
+                            <p>Descripción: {evidencia.descripcion}</p>
+                          )}
+                        </div>
+                      </Popup>
+                    </Marker>
+                  )
+                })}
+
+                {/* Buffer del preview */}
+                {previewData?.buffer_geom && (
+                  <GeoJSON
+                    data={previewData.buffer_geom}
+                    style={{
+                      color: "#3b82f6",
+                      weight: 2,
+                      fillColor: "#3b82f6",
+                      fillOpacity: 0.2
+                    }}
+                    pane="buffer"
+                  />
+                )}
+
+                {/* Concesiones */}
+                {concesiones.map((concesion) => {
+                  if (!concesion.geom) return null
+                  
+                  const centroid = getPolygonCentroid(concesion.geom)
+                  if (!centroid) return null
+
+                  const isIntersecting = previewData?.resultados?.some(
+                    r => r.id_concesion === concesion.id_concesion && r.interseccion_valida
+                  )
+
+                  return (
+                    <Marker key={concesion.id_concesion} position={centroid}>
+                      <Popup>
+                        <div className="text-sm">
+                          <p><strong>{concesion.nombre}</strong></p>
+                          <p>Titular: {concesion.titular}</p>
+                          <p>Tipo: {concesion.tipo}</p>
+                          <p>Región: {concesion.region}</p>
+                          <p>Código: {concesion.codigo_centro}</p>
+                          {isIntersecting && (
+                            <p className="text-green-600 font-medium">
+                              ✓ Intersección detectada
+                            </p>
+                          )}
+                        </div>
+                      </Popup>
+                      <Tooltip>
+                        {concesion.nombre} - {concesion.tipo}
+                      </Tooltip>
+                    </Marker>
+                  )
+                })}
+              </MapContainer>
+            </div>
           </div>
         )}
 
-        {/* Input buffer */}
-        <div className="flex items-center gap-2 mb-4">
-          <label htmlFor="buffer-input" className="font-medium">Distancia de buffer (m):</label>
-          <input
-            id="buffer-input"
-            type="number"
-            min={100}
-            max={5000}
-            step={50}
-            value={bufferInput === undefined ? '' : bufferInput}
-            placeholder="Ej: 500"
-            disabled={analysisExecuted}
-            onChange={e => {
-              const val = e.target.value === '' ? undefined : Number(e.target.value)
-              setBufferInput(val)
-            }}
-            className="border rounded px-2 py-1 w-24 disabled:bg-gray-100 disabled:cursor-not-allowed"
-          />
-          <Button
-            className="ml-2"
-            onClick={handlePreview}
-            disabled={
-              loadingPreview ||
-              bufferInput === undefined ||
-              bufferInput < 100 ||
-              bufferInput > 5000 ||
-              !data.id_denuncia ||
-              analysisExecuted
-            }
-          >
-            {loadingPreview ? "Procesando..." : "Actualizar"}
+        {/* Resultados del preview */}
+        {previewData && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Info className="h-5 w-5 text-blue-600" />
+              <h4 className="font-medium text-blue-800">Resultados del Preview</h4>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-blue-700">
+                <strong>Distancia del buffer:</strong> {previewData.distancia_buffer} metros
+              </p>
+              <p className="text-sm text-blue-700">
+                <strong>Concesiones encontradas:</strong> {previewData.resultados.length}
+              </p>
+              <p className="text-sm text-blue-700">
+                <strong>Concesiones con intersección:</strong>{" "}
+                {previewData.resultados.filter(r => r.interseccion_valida).length}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Errores */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <span className="text-red-800 font-medium">Error:</span>
+              <span className="text-red-700">{error}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Botones de navegación */}
+        <div className="flex justify-between pt-6">
+          <Button variant="outline" onClick={onPrev} disabled={loading}>
+            Anterior
           </Button>
-          
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button
-                variant="default"
-                className="ml-2"
-                disabled={!previewData || analysisExecuted || isAnalyzing}
+              <Button 
+                disabled={!previewData || loading || analysisExecuted}
+                className="bg-green-600 hover:bg-green-700"
               >
-                <Play className="h-4 w-4 mr-1" />
-                {isAnalyzing ? "Analizando..." : "Ejecutar Análisis"}
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Ejecutando Análisis...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Ejecutar Análisis
+                  </>
+                )}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Confirmar Análisis</AlertDialogTitle>
                 <AlertDialogDescription>
-                  ¿Está seguro de que desea ejecutar el análisis con una distancia de buffer de {bufferPreview}m? 
-                  Esta acción procesará {idsConcesionesIntersectadas.length} concesiones intersectadas.
-                  Una vez iniciado, no podrá modificar los parámetros.
+                  ¿Está seguro de que desea ejecutar el análisis con una distancia de buffer de {bufferDistance} metros?
+                  Esta acción generará un reporte final y no se puede deshacer.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                 <AlertDialogAction onClick={handleAnalysisConfirmation}>
-                  Confirmar Análisis
+                  Ejecutar Análisis
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        </div>
-        {errorPreview && <div className="text-red-600 text-sm mb-2">{errorPreview}</div>}
-
-        {/* Caja de instrucciones */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm">
-              <h4 className="font-medium text-blue-900 mb-2">Instrucciones para el Análisis</h4>
-              <ol className="list-decimal list-inside space-y-1 text-blue-800">
-                <li>Ingrese la distancia de buffer deseada (entre 100 y 5000 metros)</li>
-                <li>Presione "Actualizar" para ver la previsualización en el mapa</li>
-                <li>Revise las concesiones intersectadas mostradas en rojo</li>
-                <li>Cuando esté satisfecho con el buffer, presione "Ejecutar Análisis"</li>
-                <li>Confirme la ejecución en el diálogo que aparecerá</li>
-              </ol>
-              {previewData && (
-                <div className="mt-3 p-2 bg-blue-100 rounded">
-                  <strong>Resumen actual:</strong> Buffer de {bufferPreview}m intersecta con {idsConcesionesIntersectadas.length} concesión(es)
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Mapa de análisis con react-leaflet */}
-        <div className="space-y-4">
-          <h4 className="text-lg font-medium">Mapa de Inspección (Previsualización)</h4>
-          <div className="rounded-lg border overflow-hidden">
-            <MapContainer center={centro} zoom={15} style={{ height: 400, width: "100%" }}>
-              <CustomPanes />
-              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <FitBoundsToEvidencias evidencias={evidencias} />
-              {/* Evidencias */}
-              {evidencias.map(ev =>
-                ev.coordenadas && Array.isArray(ev.coordenadas.coordinates) ? (
-                  <Marker
-                    key={ev.id_evidencia}
-                    position={[ev.coordenadas.coordinates[1], ev.coordenadas.coordinates[0]]}
-                  >
-                    <Popup>
-                      Evidencia #{ev.id_evidencia}
-                    </Popup>
-                  </Marker>
-                ) : null
-              )}
-              {/* Todas las concesiones (amarillo suave) */}
-              {concesiones.map(c => (
-                <GeoJSON
-                  key={`all-${c.id_concesion}`}
-                  data={c.geom}
-                  style={{ color: "#FFD600", weight: 1, fillOpacity: 0.15 }}
-                >
-                  <Popup>
-                    <div>
-                      <div><b>Concesión:</b> {c.nombre}</div>
-                      <div><b>Código Centro:</b> {c.codigo_centro}</div>
-                      <div><b>Titular:</b> {c.titular}</div>
-                      <div><b>Tipo:</b> {c.tipo}</div>
-                      <div><b>Región:</b> {c.region}</div>
-                    </div>
-                  </Popup>
-                </GeoJSON>
-              ))}
-              {/* Buffer (azul) en su propio pane */}
-              {previewData?.buffer_geom && (
-                <GeoJSON key={previewData.distancia_buffer} data={previewData.buffer_geom} style={{ color: "blue", weight: 2, fillOpacity: 0.2 }} pane="bufferPane" />
-              )}
-              {/* Concesiones seleccionadas (rojo) en su propio pane - SIEMPRE ENCIMA */}
-              {previewData && concesiones.filter(c => idsConcesionesIntersectadas.includes(c.id_concesion)).map(c => {
-                const centroide = getPolygonCentroid(c.geom);
-                return (
-                  <React.Fragment key={c.id_concesion}>
-                    <GeoJSON
-                      data={c.geom}
-                      style={{ color: "red", weight: 2, fillOpacity: 0.3 }}
-                      pane="selectedPane"
-                    >
-                      <Popup>
-                        <div>
-                          <div><b>Concesión:</b> {c.nombre}</div>
-                          <div><b>Código Centro:</b> {c.codigo_centro}</div>
-                          <div><b>Titular:</b> {c.titular}</div>
-                          <div><b>Tipo:</b> {c.tipo}</div>
-                          <div><b>Región:</b> {c.region}</div>
-                        </div>
-                      </Popup>
-                    </GeoJSON>
-                    {centroide && (
-                      <Marker position={centroide} icon={L.divIcon({ className: 'invisible-marker' })}>
-                        <Tooltip direction="center" permanent className="tooltip-centro">
-                          <span>{c.codigo_centro}</span>
-                        </Tooltip>
-                      </Marker>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </MapContainer>
-          </div>
-        </div>
-
-        <div className="flex justify-between pt-6">
-          <Button variant="outline" onClick={onPrev}>
-            Anterior
-          </Button>
-          <Button onClick={onNext} disabled={!analysisComplete}>
-            {analysisComplete ? <CheckCircle className="h-4 w-4 mr-1" /> : null}
-            Ver Resultados
-          </Button>
         </div>
       </CardContent>
     </Card>

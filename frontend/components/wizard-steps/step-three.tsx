@@ -3,11 +3,12 @@
 import React from "react"
 
 import { useState, useRef } from "react"
+import { useAuth } from "@/hooks/use-auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Upload, X, ImageIcon } from "lucide-react"
 import type { InspectionData } from "@/components/inspection-wizard"
-import { API_TOKEN, API_BASE_URL } from "./step-one"
+import { API_BASE_URL } from "./step-one"
 
 interface StepThreeProps {
   data: InspectionData
@@ -17,6 +18,8 @@ interface StepThreeProps {
 }
 
 export function StepThree({ data, updateData, onNext, onPrev }: StepThreeProps) {
+  const { token, isAuthenticated } = useAuth()
+  
   const [photos, setPhotos] = useState<File[]>(data.photos)
   const [previews, setPreviews] = useState<string[]>([])
   const [comments, setComments] = useState<string[]>(Array(data.photos.length).fill(""))
@@ -100,144 +103,224 @@ export function StepThree({ data, updateData, onNext, onPrev }: StepThreeProps) 
   }
 
   const handleCommentChange = (index: number, value: string) => {
-    setComments((prev) => prev.map((c, i) => (i === index ? value : c)))
+    const newComments = [...comments]
+    newComments[index] = value
+    setComments(newComments)
   }
 
   const handleSubmit = async () => {
+    if (!isAuthenticated || !token) {
+      setError("Debe iniciar sesión para continuar")
+      return
+    }
+    
+    if (photos.length === 0) {
+      setError("Debe seleccionar al menos una foto")
+      return
+    }
+
     setUploading(true)
     setError(null)
     setResult(null)
+
     try {
-      if (!data.id_denuncia) throw new Error("Falta id_denuncia")
-      if (!photos.length) throw new Error("Debe subir al menos una foto")
-      if (photos.length > (data.id_evidencias?.length || 0)) throw new Error("No puede subir más fotos que puntos GPS")
-      if (comments.some(c => !c.trim())) throw new Error("Debe ingresar un comentario para cada foto")
-      const formData = new FormData()
-      photos.forEach(photo => formData.append('archivos', photo))
-      comments.forEach(comment => formData.append('descripciones', comment))
-      const res = await fetch(`${API_BASE_URL}/evidencias/upload_fotos/${data.id_denuncia}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${API_TOKEN}` },
-        body: formData
-      })
-      const resData = await res.json()
-      setUploading(false)
-      if (!res.ok) {
-        setError(resData.detail || 'Error al subir fotos')
-      } else {
-        setResult(resData)
-        // Avanzar automáticamente si no hay errores graves
-        if (!resData.errores || resData.errores.length === 0) {
-          onNext()
+      // Función para hacer fetch con mejor manejo de errores
+      const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 10000) => {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+        try {
+          const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+          })
+          clearTimeout(timeoutId)
+          return response
+        } catch (error) {
+          clearTimeout(timeoutId)
+          throw error
         }
       }
-    } catch (err: any) {
+
+      // Función para probar múltiples URLs de la API
+      const tryApiUrls = async (endpoint: string, options: RequestInit) => {
+        const urls = [
+          'http://localhost:8000',
+          'http://backend:8000',
+          'http://host.docker.internal:8000'
+        ]
+
+        for (const baseUrl of urls) {
+          try {
+            console.log(`Probando URL para upload foto: ${baseUrl}${endpoint}`)
+            const res = await fetchWithTimeout(`${baseUrl}${endpoint}`, options)
+
+            if (res.ok) {
+              console.log(`URL exitosa para upload foto: ${baseUrl}`)
+              return res
+            }
+          } catch (error) {
+            console.log(`URL falló para upload foto: ${baseUrl}`, error)
+            continue
+          }
+        }
+
+        throw new Error('No se pudo conectar a ninguna URL de la API')
+      }
+
+      // Preparar los datos para el endpoint correcto
+      const formData = new FormData()
+      
+      // Agregar cada foto
+      photos.forEach((photo) => {
+        formData.append("archivos", photo)
+      })
+      
+      // Agregar cada comentario como descripción
+      comments.forEach((comment) => {
+        formData.append("descripciones", comment || "")
+      })
+
+      const res = await tryApiUrls(`/evidencias/upload_fotos/${data.id_denuncia}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const errorText = await res.text()
+        throw new Error(`Error ${res.status}: ${res.statusText} - ${errorText}`)
+      }
+
+      const result = await res.json()
+      setResult(result)
+      onNext()
+    } catch (e: any) {
+      console.error('Error uploading photos:', e)
+      if (e.name === 'AbortError') {
+        setError("Timeout: El servidor no respondió en el tiempo esperado")
+      } else if (e.message.includes('Failed to fetch')) {
+        setError("Error de conectividad: No se puede conectar al servidor. Verifique que el backend esté ejecutándose.")
+      } else {
+        setError(e.message || "Error al subir las fotos")
+      }
+    } finally {
       setUploading(false)
-      setError(err.message || 'Error inesperado')
     }
+  }
+
+  // Mostrar mensaje si no está autenticado
+  if (!isAuthenticated) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Acceso Requerido</CardTitle>
+          <CardDescription>Debe iniciar sesión para continuar</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            Por favor, inicie sesión para continuar con la inspección.
+          </p>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Fotografías de la Inspección</CardTitle>
-        <CardDescription>Suba las fotografías tomadas durante la inspección y agregue un comentario para cada una. Se asociarán automáticamente a los puntos GPS más cercanos en tiempo.</CardDescription>
+        <CardTitle>Subir Fotos</CardTitle>
+        <CardDescription>
+          Suba las fotos de la inspección con sus respectivos comentarios
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div
-          className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 p-8 text-center"
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        >
-          <Upload className="h-10 w-10 text-muted-foreground mb-3" />
-          <h3 className="text-lg font-medium mb-2">Arrastre y suelte fotos aquí</h3>
-          <p className="text-sm text-muted-foreground mb-4">O haga clic para seleccionar archivos</p>
-          <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={photos.length >= (data.id_evidencias?.length || 0)}>
-            <ImageIcon className="mr-2 h-4 w-4" />
-            Seleccionar Fotos
-          </Button>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            multiple
-            accept="image/*"
-            className="hidden"
-            disabled={photos.length >= (data.id_evidencias?.length || 0)}
-          />
-          <p className="text-xs text-muted-foreground mt-3">Formatos soportados: JPG, PNG, HEIC, WebP. Puede subir hasta {data.id_evidencias?.length || 0} fotos.</p>
-        </div>
-
-        {photos.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-lg font-medium">Fotos Cargadas ({photos.length})</h4>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setPhotos([])
-                  setPreviews([])
-                  setComments([])
-                  updateData({ photos: [] })
-                }}
+        <div className="space-y-4">
+          <div
+            className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors"
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <p className="text-sm text-gray-600 mb-2">
+              Arrastre y suelte las fotos aquí, o{" "}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-blue-600 hover:text-blue-500"
               >
-                Limpiar Todo
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {previews.map((preview, index) => (
-                <div key={index} className="flex flex-col items-stretch bg-white rounded-xl border shadow-sm p-3 relative group transition-transform hover:scale-105">
-                  <div className="relative w-full aspect-square overflow-hidden rounded-lg mb-2">
+                seleccione archivos
+              </button>
+            </p>
+            <p className="text-xs text-gray-500">
+              Formatos soportados: JPG, PNG, GIF
+            </p>
+          </div>
+
+          {photos.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {photos.map((photo, index) => (
+                <div key={index} className="border rounded-lg p-4 space-y-3">
+                  <div className="relative">
                     <img
-                      src={preview || "/placeholder.svg"}
+                      src={previews[index] || URL.createObjectURL(photo)}
                       alt={`Foto ${index + 1}`}
-                      className="h-full w-full object-cover"
+                      className="w-full h-32 object-cover rounded"
                     />
                     <button
+                      type="button"
                       onClick={() => removePhoto(index)}
-                      className="absolute right-2 top-2 rounded-full bg-white/80 p-1 shadow hover:bg-red-100 transition-opacity opacity-0 group-hover:opacity-100"
-                      title="Eliminar foto"
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                     >
-                      <X className="h-4 w-4 text-red-600" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
-                  <div className="text-xs text-center font-medium text-gray-700 mb-1 truncate">
-                    {photos[index]?.name.split(".")[0]}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Comentario para foto {index + 1}
+                    </label>
+                    <textarea
+                      value={comments[index] || ""}
+                      onChange={(e) => handleCommentChange(index, e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      rows={3}
+                      placeholder="Agregue un comentario para esta foto..."
+                    />
                   </div>
-                  <textarea
-                    className="resize-none rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring w-full min-h-[48px] bg-gray-50"
-                    placeholder="Comentario..."
-                    value={comments[index] || ""}
-                    onChange={e => handleCommentChange(index, e.target.value)}
-                    rows={2}
-                  />
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <ImageIcon className="h-5 w-5 text-red-600 mr-2" />
+              <span className="text-red-800 font-medium">Error:</span>
+              <span className="text-red-700 ml-2">{error}</span>
             </div>
           </div>
         )}
 
-        {error && <div className="text-red-600 text-sm">{error}</div>}
         {result && (
-          <div className="bg-green-50 border border-green-200 rounded p-4 text-green-800 text-sm space-y-2">
-            <div><b>Fotos procesadas:</b> {result.fotos_procesadas}</div>
-            <div><b>Fotos asociadas:</b> {result.fotos_asociadas}</div>
-            {result.errores && result.errores.length > 0 && (
-              <div className="text-red-600"><b>Errores:</b> {result.errores.join(", ")}</div>
-            )}
-            {result.detalles && result.detalles.length > 0 && (
-              <div>
-                <b>Detalles:</b>
-                <ul className="list-disc ml-6">
-                  {result.detalles.map((d: any, i: number) => (
-                    <li key={i}>
-                      Archivo: {d.archivo}, Evidencia ID: {d.evidencia_id}, Timestamp: {d.timestamp_foto}, Ruta: {d.ruta}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <ImageIcon className="h-5 w-5 text-green-600 mr-2" />
+              <span className="text-green-800 font-medium">
+                {result.length} foto(s) subida(s) exitosamente
+              </span>
+            </div>
           </div>
         )}
 
@@ -245,7 +328,7 @@ export function StepThree({ data, updateData, onNext, onPrev }: StepThreeProps) 
           <Button variant="outline" onClick={onPrev} disabled={uploading}>
             Anterior
           </Button>
-          <Button onClick={handleSubmit} disabled={photos.length === 0 || comments.some(c => !c.trim()) || uploading}>
+          <Button onClick={handleSubmit} disabled={photos.length === 0 || uploading}>
             {uploading ? "Subiendo..." : "Siguiente"}
           </Button>
         </div>
