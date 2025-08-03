@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Eye, EyeOff, Loader2, CheckCircle } from "lucide-react"
@@ -12,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/hooks/use-auth"
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -27,6 +27,7 @@ export default function RegisterPage() {
 
   const router = useRouter()
   const { toast } = useToast()
+  const { login } = useAuth()
 
   // Validaciones en tiempo real
   const validations = {
@@ -44,25 +45,45 @@ export default function RegisterPage() {
     setError("")
 
     try {
-      // Llamada directa al backend
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-      const response = await fetch(`${apiUrl}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          nombre: formData.nombre,
-          email: formData.email,
-          password: formData.password,
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        console.error('Register failed:', response.status, errorData)
+      // Probar diferentes URLs para el backend (mismo sistema que login)
+      const possibleUrls = [
+        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+        'http://localhost:8000',
+        'http://backend:8000',
+        'http://host.docker.internal:8000'
+      ]
+      
+      let response = null
+      
+      // Probar cada URL hasta que una funcione
+      for (const url of possibleUrls) {
+        try {
+          const testUrl = `${url}/auth/register`
+          
+          response = await fetch(testUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              nombre: formData.nombre,
+              email: formData.email,
+              password: formData.password,
+            }),
+          })
+          
+          if (response.ok) {
+            break
+          }
+        } catch (err: any) {
+          continue
+        }
+      }
+      
+      if (!response || !response.ok) {
+        const errorData = await response?.json().catch(() => ({}))
         
-        if (response.status === 409 || errorData.detail?.includes("email")) {
+        if (response?.status === 409 || errorData.detail?.includes("email")) {
           setError("Este email ya está registrado")
         } else {
           setError("Error al crear la cuenta. Inténtalo de nuevo.")
@@ -79,28 +100,18 @@ export default function RegisterPage() {
       const data = await response.json()
       
       if (data.access_token && data.user) {
-        // Usar signIn solo para crear la sesión
-        const result = await signIn("credentials", {
-          nombre: formData.nombre,
-          email: formData.email,
-          password: formData.password,
-          action: "register",
-          redirect: false,
-        })
+        // Usar el hook para crear la sesión
+        login(data.access_token, data.user)
 
-        if (result?.ok) {
-          toast({
-            title: "¡Cuenta creada exitosamente!",
-            description: "Bienvenido a Playas Limpias",
-          })
-          router.push("/dashboard")
-        } else {
-          setError("Error al crear la sesión")
-        }
+        toast({
+          title: "¡Cuenta creada exitosamente!",
+          description: "Bienvenido a Playas Limpias",
+        })
+        router.push("/dashboard")
       } else {
         setError("Respuesta inválida del servidor")
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error en registro:", error)
       setError("Error inesperado. Inténtalo de nuevo.")
     } finally {

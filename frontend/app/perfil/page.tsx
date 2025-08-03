@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useSession } from "next-auth/react"
+import { useAuth } from "@/hooks/use-auth"
 import { User, Mail, Calendar, Shield, Key, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 
 export default function PerfilPage() {
-  const { data: session } = useSession()
+  const { user, isAuthenticated, loading, token } = useAuth()
   const { toast } = useToast()
 
   const [passwordForm, setPasswordForm] = useState({
@@ -44,19 +44,42 @@ export default function PerfilPage() {
     }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/auth/change-password`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.accessToken}`,
-        },
-        body: JSON.stringify({
-          current_password: passwordForm.currentPassword,
-          new_password: passwordForm.newPassword,
-        }),
-      })
+      // Probar diferentes URLs para el backend
+      const possibleUrls = [
+        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+        'http://localhost:8000',
+        'http://backend:8000',
+        'http://host.docker.internal:8000'
+      ]
+      
+      let response = null
+      
+      // Probar cada URL hasta que una funcione
+      for (const url of possibleUrls) {
+        try {
+          const testUrl = `${url}/auth/change-password`
+          
+          response = await fetch(testUrl, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              current_password: passwordForm.currentPassword,
+              new_password: passwordForm.newPassword,
+            }),
+          })
+          
+          if (response.ok) {
+            break
+          }
+        } catch (err: any) {
+          continue
+        }
+      }
 
-      if (response.ok) {
+      if (response && response.ok) {
         toast({
           title: "Contraseña actualizada",
           description: "Tu contraseña ha sido cambiada exitosamente",
@@ -67,7 +90,7 @@ export default function PerfilPage() {
           confirmPassword: "",
         })
       } else {
-        const error = await response.json()
+        const error = await response?.json().catch(() => ({}))
         setPasswordError(error.detail || "Error al cambiar la contraseña")
       }
     } catch (error) {
@@ -83,8 +106,28 @@ export default function PerfilPage() {
     if (passwordError) setPasswordError("")
   }
 
-  if (!session) {
-    return <div>Cargando...</div>
+  // Mostrar loading mientras se verifica la autenticación
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600">Cargando perfil...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Si no está autenticado, mostrar mensaje
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Acceso Denegado</h2>
+          <p className="text-gray-600 mb-4">Debes iniciar sesión para acceder a tu perfil</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -112,7 +155,7 @@ export default function PerfilPage() {
             <div className="space-y-2">
               <Label>Nombre completo</Label>
               <div className="flex items-center gap-2">
-                <Input value={session.user?.name || ""} disabled />
+                <Input value={user.nombre || ""} disabled />
               </div>
             </div>
 
@@ -120,58 +163,54 @@ export default function PerfilPage() {
               <Label>Email</Label>
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-muted-foreground" />
-                <Input value={session.user?.email || ""} disabled />
+                <Input value={user.email || ""} disabled />
               </div>
             </div>
 
-            {session.usuario && (
-              <>
-                <div className="space-y-2">
-                  <Label>Estado de cuenta</Label>
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-muted-foreground" />
-                    <Badge variant={session.usuario.activo ? "default" : "destructive"}>
-                      {session.usuario.activo ? "Activa" : "Inactiva"}
-                    </Badge>
-                  </div>
-                </div>
+            <div className="space-y-2">
+              <Label>Estado de cuenta</Label>
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-muted-foreground" />
+                <Badge variant={user.activo ? "default" : "destructive"}>
+                  {user.activo ? "Activa" : "Inactiva"}
+                </Badge>
+              </div>
+            </div>
 
-                <div className="space-y-2">
-                  <Label>Fecha de registro</Label>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      value={new Date(session.usuario.fecha_registro).toLocaleDateString('es-ES', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })} 
-                      disabled 
-                    />
-                  </div>
-                </div>
+            <div className="space-y-2">
+              <Label>Fecha de registro</Label>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <Input 
+                  value={new Date(user.fecha_registro).toLocaleDateString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })} 
+                  disabled 
+                />
+              </div>
+            </div>
 
-                {session.usuario.ultimo_acceso && (
-                  <div className="space-y-2">
-                    <Label>Último acceso</Label>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        value={new Date(session.usuario.ultimo_acceso).toLocaleDateString('es-ES', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })} 
-                        disabled 
-                      />
-                    </div>
-                  </div>
-                )}
-              </>
+            {user.ultimo_acceso && (
+              <div className="space-y-2">
+                <Label>Último acceso</Label>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    value={new Date(user.ultimo_acceso).toLocaleDateString('es-ES', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })} 
+                    disabled 
+                  />
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
