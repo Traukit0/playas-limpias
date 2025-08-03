@@ -8,6 +8,8 @@ Este documento centraliza el seguimiento del progreso del proyecto, organizado p
 
 - [SPRINT 01 - 23/06 al 06/07](./bitacora/sprint_01.md) ✅
 - [SPRINT 02 - 07/07 al 20/07](./bitacora/sprint_02.md) ✅
+- [SPRINT 03 - 21/07 al 03/08](./bitacora/sprint_03.md) ✅
+- [SPRINT 04 - Sistema de Autenticación JWT](./bitacora/sprint_04_AUTENTICACION_JWT.md) ✅
 
 ---
 

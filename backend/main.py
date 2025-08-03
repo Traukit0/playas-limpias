@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from routes import usuarios, denuncias, evidencias, concesiones, analisis, estados
+from routes import usuarios, denuncias, evidencias, concesiones, analisis, estados, auth
 import os
 
 app = FastAPI()
@@ -20,6 +20,7 @@ if os.path.exists("fotos"):
     app.mount("/fotos", StaticFiles(directory="fotos"), name="fotos")
 
 # Incluir rutas
+app.include_router(auth.router, prefix="/auth", tags=["Autenticación"])
 app.include_router(usuarios.router, prefix="/usuarios", tags=["Usuarios"])
 app.include_router(denuncias.router, prefix="/denuncias", tags=["Denuncias"])
 app.include_router(evidencias.router, prefix="/evidencias", tags=["Evidencias"])

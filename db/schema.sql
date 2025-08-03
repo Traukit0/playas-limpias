@@ -9,6 +9,10 @@ CREATE TABLE usuarios (
     id_usuario SERIAL PRIMARY KEY,
     nombre TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL
+    password_hash TEXT
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    activo BOOLEAN DEFAULT true
+    ultimo_acceso TIMESTAMP
 );
 
 -- 2. Estados de denuncia
