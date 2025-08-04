@@ -73,7 +73,7 @@ const { user, isAuthenticated, loading, login, logout } = useAuth()
 // Prueba múltiples URLs para compatibilidad Docker
 const possibleUrls = [
   'http://localhost:8000',
-  'http://backend:8000',
+  'http://localhost:8000',
   'http://host.docker.internal:8000'
 ]
 ```

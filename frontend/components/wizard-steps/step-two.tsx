@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Upload, X, MapPin, FileText } from "lucide-react"
 import type { InspectionData } from "@/components/inspection-wizard"
-import { API_TOKEN, API_BASE_URL } from "./step-one"
+import { useWizardAuth } from "@/lib/wizard-config"
 import { MapContainer, TileLayer, Marker, Popup, useMap, LayersControl } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { LatLngBounds } from 'leaflet'
@@ -29,6 +29,7 @@ interface StepTwoProps {
 }
 
 export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
+  const { token, apiUrl } = useWizardAuth()
   const [file, setFile] = useState<File | null>(data.gpxFile)
   const [waypoints, setWaypoints] = useState<number>(0)
   const [utcOffset, setUtcOffset] = useState<number | null>(data.utcOffset || null)
@@ -39,6 +40,23 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
   const [success, setSuccess] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [evidencias, setEvidencias] = useState<any[]>([])
+
+  // Función optimizada para hacer fetch directo
+  const fetchData = async (endpoint: string, options: RequestInit = {}) => {
+    const response = await fetch(`${apiUrl}${endpoint}`, {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${token}`
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
+    return response
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -94,17 +112,12 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
       formData.append("id_denuncia", String(data.id_denuncia))
       formData.append("utc_offset", String(utcOffset))
       formData.append("archivo_gpx", file)
-      const uploadRes = await fetch(`${API_BASE_URL}/evidencias/upload_gpx`, {
+      
+      const uploadRes = await fetchData('/evidencias/upload_gpx', {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${API_TOKEN}`
-        },
         body: formData
       })
-      if (!uploadRes.ok) {
-        const errData = await uploadRes.json().catch(() => ({}))
-        throw new Error(errData.detail || "Error al subir el archivo GPX")
-      }
+      
       const resData = await uploadRes.json()
       // Extraer número de waypoints del mensaje de detalle
       let waypointsProcesados = null
@@ -118,9 +131,7 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
       setWaypoints(waypointsProcesados || 0)
       setSuccess(`Archivo GPX subido y procesado correctamente. ${waypointsProcesados !== null ? `${waypointsProcesados} puntos GPS procesados.` : ''}`)
       // Obtener evidencias asociadas a la denuncia y guardar en estado
-      const evidRes = await fetch(`${API_BASE_URL}/evidencias?id_denuncia=${data.id_denuncia}`, {
-        headers: { Authorization: `Bearer ${API_TOKEN}` }
-      })
+      const evidRes = await fetchData(`/evidencias?id_denuncia=${data.id_denuncia}`)
       if (evidRes.ok) {
         const evidenciasData = await evidRes.json()
         setEvidencias(evidenciasData)
@@ -138,11 +149,7 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
     setError(null)
     try {
       // Obtener evidencias asociadas a la denuncia
-      const evidRes = await fetch(`${API_BASE_URL}/evidencias?id_denuncia=${data.id_denuncia}`, {
-        headers: {
-          Authorization: `Bearer ${API_TOKEN}`
-        }
-      })
+      const evidRes = await fetchData(`/evidencias?id_denuncia=${data.id_denuncia}`)
       if (!evidRes.ok) {
         throw new Error("Error al obtener evidencias")
       }

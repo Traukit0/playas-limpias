@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { InspectionData } from "@/components/inspection-wizard"
+import { useWizardAuth } from "@/lib/wizard-config"
 
 interface StepOneProps {
   data: InspectionData
@@ -16,10 +17,8 @@ interface StepOneProps {
   onNext: () => void
 }
 
-export const API_TOKEN = "testtoken123"
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-
 export function StepOne({ data, updateData, setInspectionData, onNext }: StepOneProps) {
+  const { token, apiUrl, isAuthenticated } = useWizardAuth()
   const [formData, setFormData] = useState({
     sectorName: data.sectorName,
     inspectionDate: data.inspectionDate,
@@ -31,43 +30,51 @@ export function StepOne({ data, updateData, setInspectionData, onNext }: StepOne
   const [usuarios, setUsuarios] = useState<any[]>([])
   const [estados, setEstados] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingData, setLoadingData] = useState(false)
   const [error, setError] = useState("")
 
-  useEffect(() => {
-    // Cargar usuarios
-    fetch(`${API_BASE_URL}/usuarios/`, {
-      headers: { Authorization: `Bearer ${API_TOKEN}` }
+  // Función optimizada para hacer fetch directo
+  const fetchData = async (endpoint: string) => {
+    const response = await fetch(`${apiUrl}${endpoint}`, {
+      headers: { Authorization: `Bearer ${token}` }
     })
-      .then(res => {
-        if (!res.ok) {
-          console.error('Error cargando usuarios:', res.status, res.statusText)
-          throw new Error(`Error ${res.status}: ${res.statusText}`)
-        }
-        return res.json()
-      })
-      .then(setUsuarios)
-      .catch((error) => {
-        console.error('Error al cargar usuarios:', error)
-        setUsuarios([])
-      })
     
-    // Cargar estados
-    fetch(`${API_BASE_URL}/estados_denuncia/`, {
-      headers: { Authorization: `Bearer ${API_TOKEN}` }
-    })
-      .then(res => {
-        if (!res.ok) {
-          console.error('Error cargando estados:', res.status, res.statusText)
-          throw new Error(`Error ${res.status}: ${res.statusText}`)
-        }
-        return res.json()
-      })
-      .then(setEstados)
-      .catch((error) => {
-        console.error('Error al cargar estados:', error)
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
+    return await response.json()
+  }
+
+  useEffect(() => {
+    // Cargar datos cuando el token esté disponible
+    const cargarDatos = async () => {
+      if (!token) return
+      
+      setLoadingData(true)
+      setError("")
+      
+      try {
+        // Cargar usuarios y estados en paralelo para mejor performance
+        const [usuariosData, estadosData] = await Promise.all([
+          fetchData('/usuarios/'),
+          fetchData('/estados_denuncia/')
+        ])
+        
+        setUsuarios(usuariosData)
+        setEstados(estadosData)
+      } catch (error) {
+        console.error('Error al cargar datos:', error)
+        setError(`Error al cargar datos: ${error instanceof Error ? error.message : 'Error desconocido'}`)
+        setUsuarios([])
         setEstados([])
-      })
-  }, [])
+      } finally {
+        setLoadingData(false)
+      }
+    }
+
+    cargarDatos()
+  }, [token, apiUrl]) // Dependencia en token y apiUrl para recargar cuando cambien
 
   const handleInputChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -83,6 +90,11 @@ export function StepOne({ data, updateData, setInspectionData, onNext }: StepOne
     formData.fecha_ingreso
 
   const handleNext = async () => {
+    if (!token) {
+      setError("No hay token de autenticación disponible")
+      return
+    }
+    
     setLoading(true)
     setError("")
     try {
@@ -96,26 +108,24 @@ export function StepOne({ data, updateData, setInspectionData, onNext }: StepOne
       }
       
       console.log('Enviando datos a la API:', body)
-      console.log('URL de la API:', `${API_BASE_URL}/denuncias/`)
+      console.log('URL de la API:', `${apiUrl}/denuncias/`)
       
-      const res = await fetch(`${API_BASE_URL}/denuncias/`, {
+      const response = await fetch(`${apiUrl}/denuncias/`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          Authorization: `Bearer ${API_TOKEN}`
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify(body),
       })
       
-      console.log('Respuesta del servidor:', res.status, res.statusText)
-      
-      if (!res.ok) {
-        const errorText = await res.text()
+      if (!response.ok) {
+        const errorText = await response.text()
         console.error('Error response:', errorText)
-        throw new Error(`Error ${res.status}: ${res.statusText} - ${errorText}`)
+        throw new Error(`Error ${response.status}: ${response.statusText} - ${errorText}`)
       }
       
-      const dataRes = await res.json()
+      const dataRes = await response.json()
       console.log('Respuesta exitosa:', dataRes)
       
       setInspectionData((prev: any) => ({ ...prev, ...body, id_denuncia: dataRes.id_denuncia }))
@@ -158,9 +168,13 @@ export function StepOne({ data, updateData, setInspectionData, onNext }: StepOne
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="id_usuario">Inspector Responsable *</Label>
-            <Select value={formData.id_usuario?.toString() || ""} onValueChange={(value) => handleInputChange("id_usuario", Number(value))}>
+            <Select 
+              value={formData.id_usuario?.toString() || ""} 
+              onValueChange={(value) => handleInputChange("id_usuario", Number(value))}
+              disabled={loadingData}
+            >
               <SelectTrigger id="id_usuario">
-                <SelectValue placeholder="Seleccionar inspector" />
+                <SelectValue placeholder={loadingData ? "Cargando..." : "Seleccionar inspector"} />
               </SelectTrigger>
               <SelectContent>
                 {usuarios.map((usuario) => (
@@ -176,9 +190,13 @@ export function StepOne({ data, updateData, setInspectionData, onNext }: StepOne
           </div>
           <div className="space-y-2">
             <Label htmlFor="id_estado">Estado de Denuncia *</Label>
-            <Select value={formData.id_estado?.toString() || ""} onValueChange={(value) => handleInputChange("id_estado", Number(value))}>
+            <Select 
+              value={formData.id_estado?.toString() || ""} 
+              onValueChange={(value) => handleInputChange("id_estado", Number(value))}
+              disabled={loadingData}
+            >
               <SelectTrigger id="id_estado">
-                <SelectValue placeholder="Seleccionar estado" />
+                <SelectValue placeholder={loadingData ? "Cargando..." : "Seleccionar estado"} />
               </SelectTrigger>
               <SelectContent>
                 {estados.map((estado) => (
@@ -209,7 +227,7 @@ export function StepOne({ data, updateData, setInspectionData, onNext }: StepOne
           <Button variant="outline" disabled>
             Cancelar
           </Button>
-          <Button onClick={handleNext} disabled={!canProceed || loading}>
+          <Button onClick={handleNext} disabled={!canProceed || loading || !isAuthenticated || loadingData}>
             {loading ? "Guardando..." : "Siguiente"}
           </Button>
         </div>

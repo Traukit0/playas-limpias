@@ -48,7 +48,7 @@ export default function PerfilPage() {
       const possibleUrls = [
         process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
         'http://localhost:8000',
-        'http://backend:8000',
+        'http://localhost:8000',
         'http://host.docker.internal:8000'
       ]
       

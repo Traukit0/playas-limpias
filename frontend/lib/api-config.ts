@@ -16,7 +16,7 @@ export const getApiUrl = () => {
                     process.env.DOCKER_CONTAINER === 'true'
     
     if (isDocker) {
-      return 'http://backend:8000'
+      return 'http://localhost:8000'
     }
   }
   
