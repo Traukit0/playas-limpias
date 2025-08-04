@@ -2,13 +2,12 @@
 
 import type React from "react"
 
-import { useState, useRef, useEffect } from "react"
-import { useAuth } from "@/hooks/use-auth"
+import { useState, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Upload, X, MapPin, FileText } from "lucide-react"
 import type { InspectionData } from "@/components/inspection-wizard"
-import { API_BASE_URL } from "./step-one"
+import { API_TOKEN, API_BASE_URL } from "./step-one"
 import { MapContainer, TileLayer, Marker, Popup, useMap, LayersControl } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { LatLngBounds } from 'leaflet'
@@ -30,8 +29,6 @@ interface StepTwoProps {
 }
 
 export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
-  const { token, isAuthenticated } = useAuth()
-  
   const [file, setFile] = useState<File | null>(data.gpxFile)
   const [waypoints, setWaypoints] = useState<number>(0)
   const [utcOffset, setUtcOffset] = useState<number | null>(data.utcOffset || null)
@@ -42,14 +39,6 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
   const [success, setSuccess] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [evidencias, setEvidencias] = useState<any[]>([])
-
-  // Cargar evidencias cuando el componente se monta
-  useEffect(() => {
-    if (isAuthenticated && token && data.id_denuncia) {
-      console.log('Componente montado, cargando evidencias existentes...')
-      loadEvidencias()
-    }
-  }, [isAuthenticated, token, data.id_denuncia])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -95,11 +84,7 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
   }
 
   const handleUpload = async () => {
-    if (!file || utcOffset === null || !isAuthenticated || !token) {
-      setError("Debe iniciar sesión para continuar")
-      return
-    }
-    
+    if (!file || utcOffset === null) return
     setUploading(true)
     setError(null)
     setSuccess(null)
@@ -109,233 +94,89 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
       formData.append("id_denuncia", String(data.id_denuncia))
       formData.append("utc_offset", String(utcOffset))
       formData.append("archivo_gpx", file)
-
-      // Función para hacer fetch con mejor manejo de errores
-      const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 10000) => {
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), timeout)
-
-        try {
-          const response = await fetch(url, {
-            ...options,
-            signal: controller.signal
-          })
-          clearTimeout(timeoutId)
-          return response
-        } catch (error) {
-          clearTimeout(timeoutId)
-          throw error
-        }
-      }
-
-      // Función para probar múltiples URLs de la API
-      const tryApiUrls = async (endpoint: string, options: RequestInit) => {
-        const urls = [
-          'http://localhost:8000',
-          'http://backend:8000',
-          'http://host.docker.internal:8000'
-        ]
-
-        for (const baseUrl of urls) {
-          try {
-            console.log(`Probando URL para upload: ${baseUrl}${endpoint}`)
-            const res = await fetchWithTimeout(`${baseUrl}${endpoint}`, options)
-
-            if (res.ok) {
-              console.log(`URL exitosa para upload: ${baseUrl}`)
-              return res
-            }
-          } catch (error) {
-            console.log(`URL falló para upload: ${baseUrl}`, error)
-            continue
-          }
-        }
-
-        throw new Error('No se pudo conectar a ninguna URL de la API')
-      }
-
-      const uploadRes = await tryApiUrls('/evidencias/upload_gpx', {
+      const uploadRes = await fetch(`${API_BASE_URL}/evidencias/upload_gpx`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${API_TOKEN}`
         },
-        body: formData,
+        body: formData
       })
-
       if (!uploadRes.ok) {
-        const errorText = await uploadRes.text()
-        throw new Error(`Error ${uploadRes.status}: ${uploadRes.statusText} - ${errorText}`)
+        const errData = await uploadRes.json().catch(() => ({}))
+        throw new Error(errData.detail || "Error al subir el archivo GPX")
       }
-
-      const uploadData = await uploadRes.json()
-      console.log('Upload exitoso - Respuesta completa:', uploadData)
-      console.log('Upload exitoso - waypoints field:', uploadData.waypoints)
-      console.log('Upload exitoso - tipo de waypoints:', typeof uploadData.waypoints)
-      
-      // Intentar obtener el número de waypoints de diferentes campos posibles
-      const waypointsCount = uploadData.waypoints || uploadData.puntos || uploadData.count || 0
-      console.log('Waypoints count calculado:', waypointsCount)
-      
-      setWaypoints(waypointsCount)
+      const resData = await uploadRes.json()
+      // Extraer número de waypoints del mensaje de detalle
+      let waypointsProcesados = null
+      if (resData && typeof resData.detalle === "string") {
+        const match = resData.detalle.match(/(\d+) waypoints procesados/)
+        if (match) {
+          waypointsProcesados = parseInt(match[1], 10)
+        }
+      }
       setUploaded(true)
-      setSuccess(`Archivo subido exitosamente. ${waypointsCount} waypoints procesados.`)
-      
-      // Cargar evidencias después del upload con un pequeño delay
-      console.log('Esperando un momento para cargar evidencias...')
-      setTimeout(async () => {
-        console.log('Cargando evidencias después del upload...')
-        await loadEvidencias()
-      }, 1000)
-    } catch (e: any) {
-      console.error('Error uploading file:', e)
-      if (e.name === 'AbortError') {
-        setError("Timeout: El servidor no respondió en el tiempo esperado")
-      } else if (e.message.includes('Failed to fetch')) {
-        setError("Error de conectividad: No se puede conectar al servidor. Verifique que el backend esté ejecutándose.")
-      } else {
-        setError(e.message || "Error al subir el archivo")
+      setWaypoints(waypointsProcesados || 0)
+      setSuccess(`Archivo GPX subido y procesado correctamente. ${waypointsProcesados !== null ? `${waypointsProcesados} puntos GPS procesados.` : ''}`)
+      // Obtener evidencias asociadas a la denuncia y guardar en estado
+      const evidRes = await fetch(`${API_BASE_URL}/evidencias?id_denuncia=${data.id_denuncia}`, {
+        headers: { Authorization: `Bearer ${API_TOKEN}` }
+      })
+      if (evidRes.ok) {
+        const evidenciasData = await evidRes.json()
+        setEvidencias(evidenciasData)
       }
+    } catch (err: any) {
+      setError(err.message || "Error inesperado")
     } finally {
       setUploading(false)
     }
   }
 
-  const loadEvidencias = async () => {
-    if (!isAuthenticated || !token) {
-      console.log('No autenticado o sin token, saltando carga de evidencias')
-      return
-    }
-    
-    console.log('Cargando evidencias para denuncia:', data.id_denuncia)
-    
-    try {
-      // Función para hacer fetch con mejor manejo de errores
-      const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 10000) => {
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), timeout)
-
-        try {
-          const response = await fetch(url, {
-            ...options,
-            signal: controller.signal
-          })
-          clearTimeout(timeoutId)
-          return response
-        } catch (error) {
-          clearTimeout(timeoutId)
-          throw error
-        }
-      }
-
-      // Función para probar múltiples URLs de la API
-      const tryApiUrls = async (endpoint: string, options: RequestInit) => {
-        const urls = [
-          'http://localhost:8000',
-          'http://backend:8000',
-          'http://host.docker.internal:8000'
-        ]
-
-        for (const baseUrl of urls) {
-          try {
-            console.log(`Probando URL para evidencias: ${baseUrl}${endpoint}`)
-            const res = await fetchWithTimeout(`${baseUrl}${endpoint}`, options)
-
-            if (res.ok) {
-              console.log(`URL exitosa para evidencias: ${baseUrl}`)
-              return res
-            }
-          } catch (error) {
-            console.log(`URL falló para evidencias: ${baseUrl}`, error)
-            continue
-          }
-        }
-
-        throw new Error('No se pudo conectar a ninguna URL de la API')
-      }
-
-      const res = await tryApiUrls(`/evidencias/?id_denuncia=${data.id_denuncia}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      
-      if (!res.ok) {
-        throw new Error(`Error ${res.status}: ${res.statusText}`)
-      }
-      
-      const evidenciasData = await res.json()
-      console.log('Evidencias cargadas:', evidenciasData)
-      setEvidencias(evidenciasData)
-      
-      // Actualizar el contador de waypoints basado en las evidencias cargadas
-      if (evidenciasData.length > 0) {
-        console.log('Actualizando waypoints count basado en evidencias:', evidenciasData.length)
-        setWaypoints(evidenciasData.length)
-        setSuccess(`Archivo subido exitosamente. ${evidenciasData.length} waypoints procesados.`)
-      }
-    } catch (error) {
-      console.error('Error loading evidencias:', error)
-      setEvidencias([])
-    }
-  }
-
   const handleNext = async () => {
-    if (!isAuthenticated || !token) {
-      setError("Debe iniciar sesión para continuar")
-      return
-    }
-    
+    if (!uploaded) return
     setLoading(true)
     setError(null)
     try {
-      // Cargar evidencias antes de continuar
-      await loadEvidencias()
+      // Obtener evidencias asociadas a la denuncia
+      const evidRes = await fetch(`${API_BASE_URL}/evidencias?id_denuncia=${data.id_denuncia}`, {
+        headers: {
+          Authorization: `Bearer ${API_TOKEN}`
+        }
+      })
+      if (!evidRes.ok) {
+        throw new Error("Error al obtener evidencias")
+      }
+      const evidencias = await evidRes.json()
+      const ids = evidencias.map((e: any) => e.id_evidencia)
+      updateData({ id_evidencias: ids })
+      setWaypoints(evidencias.length)
       onNext()
-    } catch (e: any) {
-      console.error('Error in handleNext:', e)
-      setError(e.message || "Error al continuar")
+    } catch (err: any) {
+      setError(err.message || "Error inesperado")
     } finally {
       setLoading(false)
     }
   }
 
-  const getLatLngs = () : [number, number][] => {
-    console.log('getLatLngs - Total evidencias:', evidencias.length)
-    const filteredEvidencias = evidencias.filter((evidencia: any) => evidencia.coordenadas)
-    console.log('getLatLngs - Evidencias con coordenadas:', filteredEvidencias.length)
-    
-    return filteredEvidencias.map((evidencia: any) => {
-      const coords: [number, number] = [
-        evidencia.coordenadas.coordinates[1],
-        evidencia.coordenadas.coordinates[0]
-      ]
-      console.log('Coordenadas para evidencia', evidencia.id_evidencia, ':', coords)
-      return coords
-    })
-  }
+  // Función para obtener los puntos [lat, lng] desde evidencias
+  const getLatLngs = () : [number, number][] =>
+    evidencias
+      .map(ev => {
+        const coords = ev.coordenadas
+        if (coords && coords.type === "Point" && Array.isArray(coords.coordinates)) {
+          return [coords.coordinates[1], coords.coordinates[0]] as [number, number]
+        }
+        return undefined
+      })
+      .filter((x): x is [number, number] => Array.isArray(x))
 
   function FitBounds({ points }: { points: [number, number][] }) {
     const map = useMap()
     if (points.length > 0) {
       const bounds = new LatLngBounds(points)
-      map.fitBounds(bounds, { padding: [20, 20] })
+      map.fitBounds(bounds, { padding: [30, 30] })
     }
     return null
-  }
-
-  // Mostrar mensaje si no está autenticado
-  if (!isAuthenticated) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Acceso Requerido</CardTitle>
-          <CardDescription>Debe iniciar sesión para continuar</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Por favor, inicie sesión para continuar con la inspección.
-          </p>
-        </CardContent>
-      </Card>
-    )
   }
 
   return (
@@ -350,11 +191,11 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
           <select
             className="border rounded px-3 py-2"
             value={utcOffset ?? ""}
-            onChange={e => {
-              const value = Number(e.target.value)
-              setUtcOffset(value)
-              updateData({ utcOffset: value })
-            }}
+                            onChange={e => {
+                  const value = Number(e.target.value)
+                  setUtcOffset(value)
+                  updateData({ utcOffset: value })
+                }}
           >
             <option value="" disabled>Seleccione un offset</option>
             <option value="-3">-3</option>
@@ -399,31 +240,26 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
             >
               {uploading ? "Subiendo..." : uploaded ? "Archivo Subido" : "Subir Archivo"}
             </Button>
-                         {uploaded && (
-               <div className="rounded-lg bg-muted p-4">
-                 <div className="flex items-center gap-2 mb-2">
-                   <MapPin className="h-5 w-5 text-primary" />
-                   <h4 className="font-medium">Archivo procesado</h4>
-                 </div>
-                 <div className="grid grid-cols-2 gap-4 text-sm">
-                   <div>
-                     <span className="text-muted-foreground">Waypoints procesados: {waypoints}</span>
-                   </div>
-                   <div>
-                     <span className="text-muted-foreground">Puede continuar al siguiente paso.</span>
-                   </div>
-                 </div>
-               </div>
-             )}
+            {uploaded && (
+              <div className="rounded-lg bg-muted p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  <h4 className="font-medium">Archivo procesado</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Puede continuar al siguiente paso.</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
         {error && <div className="text-red-600 text-sm">{error}</div>}
         {success && <div className="text-green-600 text-sm">{success}</div>}
-                 {evidencias.length > 0 && (
-           <>
-             <div className="font-semibold text-base mb-2">
-               Previsualización de puntos cargados ({evidencias.length} puntos)
-             </div>
+        {evidencias.length > 0 && (
+          <>
+            <div className="font-semibold text-base mb-2">Previsualización de puntos cargados</div>
             <div className="w-full h-[400px] my-4 rounded-lg overflow-hidden">
               <MapContainer
                 style={{ width: "100%", height: "100%" }}
@@ -432,10 +268,6 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
                 scrollWheelZoom={true}
                 className="w-full h-full"
               >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution="&copy; OpenStreetMap contributors"
-                />
                 <LayersControl position="topright">
                   <LayersControl.BaseLayer checked name="OpenStreetMap">
                     <TileLayer
@@ -462,7 +294,6 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
             </div>
           </>
         )}
-
         <div className="flex justify-between pt-6">
           <Button variant="outline" onClick={onPrev} disabled={uploading || loading}>
             Anterior
