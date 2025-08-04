@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Upload, X, ImageIcon } from "lucide-react"
 import type { InspectionData } from "@/components/inspection-wizard"
-import { API_TOKEN, API_BASE_URL } from "./step-one"
+import { useWizardAuth } from "@/lib/wizard-config"
 
 interface StepThreeProps {
   data: InspectionData
@@ -17,6 +17,7 @@ interface StepThreeProps {
 }
 
 export function StepThree({ data, updateData, onNext, onPrev }: StepThreeProps) {
+  const { token, apiUrl } = useWizardAuth()
   const [photos, setPhotos] = useState<File[]>(data.photos)
   const [previews, setPreviews] = useState<string[]>([])
   const [comments, setComments] = useState<string[]>(Array(data.photos.length).fill(""))
@@ -36,6 +37,23 @@ export function StepThree({ data, updateData, onNext, onPrev }: StepThreeProps) 
       return prev
     })
   }, [photos.length])
+
+  // Función optimizada para hacer fetch directo
+  const fetchData = async (endpoint: string, options: RequestInit = {}) => {
+    const response = await fetch(`${apiUrl}${endpoint}`, {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${token}`
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
+    return response
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -112,16 +130,19 @@ export function StepThree({ data, updateData, onNext, onPrev }: StepThreeProps) 
       if (!photos.length) throw new Error("Debe subir al menos una foto")
       if (photos.length > (data.id_evidencias?.length || 0)) throw new Error("No puede subir más fotos que puntos GPS")
       if (comments.some(c => !c.trim())) throw new Error("Debe ingresar un comentario para cada foto")
+      
       const formData = new FormData()
       photos.forEach(photo => formData.append('archivos', photo))
       comments.forEach(comment => formData.append('descripciones', comment))
-      const res = await fetch(`${API_BASE_URL}/evidencias/upload_fotos/${data.id_denuncia}`, {
+      
+      const res = await fetchData(`/evidencias/upload_fotos/${data.id_denuncia}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${API_TOKEN}` },
         body: formData
       })
+      
       const resData = await res.json()
       setUploading(false)
+      
       if (!res.ok) {
         setError(resData.detail || 'Error al subir fotos')
       } else {
