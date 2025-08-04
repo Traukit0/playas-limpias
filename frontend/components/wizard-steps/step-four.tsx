@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { MapPin, ImageIcon, FileText, Play, CheckCircle, User, AlertCircle, Info } from "lucide-react"
 import { AnalysisMap } from "@/components/analysis-map"
 import type { InspectionData } from "@/components/inspection-wizard"
-import { API_TOKEN, API_BASE_URL } from "./step-one"
+import { useWizardAuth } from "@/lib/wizard-config"
 import { MapContainer, TileLayer, Marker, GeoJSON, Popup, useMap, Tooltip } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import { useRef } from "react"
@@ -118,6 +118,7 @@ function CustomPanes() {
 }
 
 export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
+  const { token, apiUrl } = useWizardAuth()
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisComplete, setAnalysisComplete] = useState(data.analysisComplete)
   const [analysisExecuted, setAnalysisExecuted] = useState(false)
@@ -139,60 +140,77 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
   const [loadingPreview, setLoadingPreview] = useState(false)
   const [errorPreview, setErrorPreview] = useState<string | null>(null)
 
+  // Función optimizada para hacer fetch directo
+  const fetchData = async (endpoint: string, options: RequestInit = {}) => {
+    const response = await fetch(`${apiUrl}${endpoint}`, {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${token}`
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
+    return response
+  }
+
   // Cargar datos de usuario, estado y evidencias cuando el componente se monta
   useEffect(() => {
     const cargarDatos = async () => {
+      // Verificar que el token esté disponible antes de hacer las llamadas
+      if (!token) {
+        console.log('Token no disponible, esperando...')
+        return
+      }
+
       setLoadingData(true)
       setErrorData(null)
       
       try {
         // Cargar datos del usuario si existe id_usuario
         if (data.id_usuario) {
-          const usuarioRes = await fetch(`${API_BASE_URL}/usuarios/?id_usuario=${data.id_usuario}`, {
-            headers: { Authorization: `Bearer ${API_TOKEN}` }
-          })
-          
-          if (usuarioRes.ok) {
+          try {
+            const usuarioRes = await fetchData(`/usuarios/?id_usuario=${data.id_usuario}`)
             const usuarios = await usuarioRes.json()
             if (usuarios.length > 0) {
               setUsuario(usuarios[0])
             }
-          } else {
-            console.error('Error cargando usuario:', usuarioRes.status)
+          } catch (error) {
+            console.error('Error cargando usuario:', error)
+            // No mostrar error crítico, solo log
           }
         }
 
         // Cargar datos del estado si existe id_estado
         if (data.id_estado) {
-          const estadoRes = await fetch(`${API_BASE_URL}/estados_denuncia/?id_estado=${data.id_estado}`, {
-            headers: { Authorization: `Bearer ${API_TOKEN}` }
-          })
-          
-          if (estadoRes.ok) {
+          try {
+            const estadoRes = await fetchData(`/estados_denuncia/?id_estado=${data.id_estado}`)
             const estados = await estadoRes.json()
             if (estados.length > 0) {
               setEstado(estados[0])
             }
-          } else {
-            console.error('Error cargando estado:', estadoRes.status)
+          } catch (error) {
+            console.error('Error cargando estado:', error)
+            // No mostrar error crítico, solo log
           }
         }
 
         // Cargar evidencias GPS si existe id_denuncia
         if (data.id_denuncia) {
-          const evidenciasRes = await fetch(`${API_BASE_URL}/evidencias/?id_denuncia=${data.id_denuncia}`, {
-            headers: { Authorization: `Bearer ${API_TOKEN}` }
-          })
-          
-          if (evidenciasRes.ok) {
+          try {
+            const evidenciasRes = await fetchData(`/evidencias/?id_denuncia=${data.id_denuncia}`)
             const evidenciasData = await evidenciasRes.json()
             setEvidencias(evidenciasData)
-          } else {
-            console.error('Error cargando evidencias:', evidenciasRes.status)
+          } catch (error) {
+            console.error('Error cargando evidencias:', error)
+            setErrorData('Error al cargar evidencias GPS')
           }
         }
       } catch (error) {
-        console.error('Error al cargar datos:', error)
+        console.error('Error general al cargar datos:', error)
         setErrorData('Error al cargar información de la denuncia')
       } finally {
         setLoadingData(false)
@@ -200,46 +218,48 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
     }
 
     cargarDatos()
-  }, [data.id_usuario, data.id_estado, data.id_denuncia])
+  }, [data.id_usuario, data.id_estado, data.id_denuncia, token, apiUrl])
 
   // Cargar concesiones al montar
   useEffect(() => {
     const cargarConcesiones = async () => {
+      // Verificar que el token esté disponible
+      if (!token) {
+        console.log('Token no disponible para concesiones, esperando...')
+        return
+      }
+
       setLoadingConcesiones(true)
       setErrorConcesiones(null)
       try {
-        const res = await fetch(`${API_BASE_URL}/concesiones`, {
-          headers: { Authorization: `Bearer ${API_TOKEN}` }
-        })
-        if (!res.ok) throw new Error("Error al cargar concesiones")
+        const res = await fetchData('/concesiones')
         const data = await res.json()
         setConcesiones(data)
       } catch (err: any) {
+        console.error('Error cargando concesiones:', err)
         setErrorConcesiones(err.message || "Error inesperado")
       } finally {
         setLoadingConcesiones(false)
       }
     }
     cargarConcesiones()
-  }, [])
+  }, [token, apiUrl])
 
   // Función para llamar a /analisis/preview
   const handlePreview = async () => {
     setLoadingPreview(true)
     setErrorPreview(null)
     try {
-      const res = await fetch(`${API_BASE_URL}/analisis/preview`, {
+      const res = await fetchData('/analisis/preview', {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${API_TOKEN}`,
         },
         body: JSON.stringify({
           id_denuncia: data.id_denuncia,
           distancia_buffer: bufferInput,
         }),
       })
-      if (!res.ok) throw new Error("Error al obtener previsualización")
       const json = await res.json()
       setPreviewData({ ...json, distancia_buffer: bufferInput! })
       setBufferPreview(bufferInput)
@@ -257,11 +277,10 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
 
     try {
       // Ejecutar análisis real enviando datos a la base de datos
-      const response = await fetch(`${API_BASE_URL}/analisis`, {
+      const response = await fetchData('/analisis', {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${API_TOKEN}`,
         },
         body: JSON.stringify({
           id_denuncia: data.id_denuncia,
@@ -270,10 +289,6 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
           observaciones: data.observations || "Análisis automático generado desde la aplicación web"
         }),
       })
-
-      if (!response.ok) {
-        throw new Error(`Error en el análisis: ${response.status}`)
-      }
 
       const analysisResult = await response.json()
 

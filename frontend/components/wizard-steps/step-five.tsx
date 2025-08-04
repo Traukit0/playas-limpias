@@ -11,7 +11,7 @@ import { MapContainer, TileLayer, Marker, GeoJSON, Popup, useMap, Tooltip } from
 import "leaflet/dist/leaflet.css"
 import L from "leaflet"
 import type { InspectionData } from "@/components/inspection-wizard"
-import { API_TOKEN, API_BASE_URL } from "./step-one"
+import { useWizardAuth } from "@/lib/wizard-config"
 
 interface StepFiveProps {
   data: InspectionData
@@ -94,6 +94,7 @@ function CustomPanes() {
 }
 
 export function StepFive({ data, onPrev }: StepFiveProps) {
+  const { token, apiUrl } = useWizardAuth()
   const [selectedConcession, setSelectedConcession] = useState<any>(null)
   
   // Estados para cargar datos adicionales
@@ -119,46 +120,67 @@ export function StepFive({ data, onPrev }: StepFiveProps) {
   // Centro del mapa (fallback a Puerto Montt)
   const centro: [number, number] = [-41.4689, -72.9411]
 
+  // Función optimizada para hacer fetch directo
+  const fetchData = async (endpoint: string, options: RequestInit = {}) => {
+    const response = await fetch(`${apiUrl}${endpoint}`, {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${token}`
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
+    return response
+  }
+
   // Cargar datos de usuario y evidencias
   useEffect(() => {
     const cargarDatos = async () => {
+      // Verificar que el token esté disponible
+      if (!token) {
+        console.log('Token no disponible, esperando...')
+        return
+      }
+
       setLoadingData(true)
       
       try {
         // Cargar datos del usuario si existe id_usuario
         if (data.id_usuario) {
-          const usuarioRes = await fetch(`${API_BASE_URL}/usuarios/?id_usuario=${data.id_usuario}`, {
-            headers: { Authorization: `Bearer ${API_TOKEN}` }
-          })
-          
-          if (usuarioRes.ok) {
+          try {
+            const usuarioRes = await fetchData(`/usuarios/?id_usuario=${data.id_usuario}`)
             const usuarios = await usuarioRes.json()
             if (usuarios.length > 0) {
               setUsuario(usuarios[0])
             }
+          } catch (error) {
+            console.error('Error cargando usuario:', error)
           }
         }
 
         // Cargar evidencias GPS si existe id_denuncia
         if (data.id_denuncia) {
-          const evidenciasRes = await fetch(`${API_BASE_URL}/evidencias/?id_denuncia=${data.id_denuncia}`, {
-            headers: { Authorization: `Bearer ${API_TOKEN}` }
-          })
-          
-          if (evidenciasRes.ok) {
+          try {
+            const evidenciasRes = await fetchData(`/evidencias/?id_denuncia=${data.id_denuncia}`)
             const evidenciasData = await evidenciasRes.json()
             setEvidencias(evidenciasData)
+          } catch (error) {
+            console.error('Error cargando evidencias:', error)
           }
         }
       } catch (error) {
-        console.error('Error al cargar datos:', error)
+        console.error('Error general al cargar datos:', error)
       } finally {
         setLoadingData(false)
       }
     }
 
     cargarDatos()
-  }, [data.id_usuario, data.id_denuncia])
+  }, [data.id_usuario, data.id_denuncia, token, apiUrl])
 
   const handleDownloadPDF = async () => {
     if (!analysisResults?.id_analisis) return
@@ -167,17 +189,12 @@ export function StepFive({ data, onPrev }: StepFiveProps) {
     setErrorPdf(null)
     
     try {
-      const response = await fetch(`${API_BASE_URL}/analisis/${analysisResults.id_analisis}/pdf`, {
+      const response = await fetchData(`/analisis/${analysisResults.id_analisis}/pdf`, {
         method: 'GET',
         headers: { 
-          Authorization: `Bearer ${API_TOKEN}`,
           'Accept': 'application/pdf'
         }
       })
-      
-      if (!response.ok) {
-        throw new Error(`Error generando PDF: ${response.status} ${response.statusText}`)
-      }
       
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
@@ -204,17 +221,12 @@ export function StepFive({ data, onPrev }: StepFiveProps) {
     setErrorKmz(null)
     
     try {
-      const response = await fetch(`${API_BASE_URL}/analisis/${analysisResults.id_analisis}/kmz`, {
+      const response = await fetchData(`/analisis/${analysisResults.id_analisis}/kmz`, {
         method: 'GET',
         headers: { 
-          Authorization: `Bearer ${API_TOKEN}`,
           'Accept': 'application/vnd.google-earth.kmz'
         }
       })
-      
-      if (!response.ok) {
-        throw new Error(`Error generando KMZ: ${response.status} ${response.statusText}`)
-      }
       
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
