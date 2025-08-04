@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface User {
   id_usuario: number
@@ -17,6 +18,7 @@ interface AuthState {
 }
 
 export function useAuth() {
+  const router = useRouter()
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     user: null,
@@ -86,6 +88,9 @@ export function useAuth() {
       token: null,
       loading: false,
     })
+    
+    // Redirigir al login después de cerrar sesión
+    router.push('/auth/login')
   }
 
   return {

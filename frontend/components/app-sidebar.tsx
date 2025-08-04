@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
-import { Compass, FileBarChart, History, Map, Plus, Settings, User, Menu, X } from "lucide-react"
+import { Compass, FileBarChart, History, Map, Plus, Settings, User, Menu, X, LogOut } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/hooks/use-auth"
 
 const menuItems = [
   {
@@ -53,6 +54,7 @@ const menuItems = [
 export function AppSidebar() {
   const pathname = usePathname()
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const { user, logout } = useAuth()
 
   return (
     <>
@@ -107,27 +109,40 @@ export function AppSidebar() {
               <button className="flex w-full items-center gap-2 rounded-md p-2 hover:bg-accent">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src="https://ui.shadcn.com/avatars/01.png" alt="Avatar" />
-                  <AvatarFallback>IN</AvatarFallback>
+                  <AvatarFallback>
+                    {user ? user.nombre.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col items-start text-sm">
-                  <span className="font-medium">Inspector</span>
-                  <span className="text-xs text-muted-foreground">inspector@ejemplo.com</span>
+                  <span className="font-medium">
+                    {user ? user.nombre : 'Usuario'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {user ? user.email : 'cargando...'}
+                  </span>
                 </div>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
               <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                <span>Perfil</span>
+              <DropdownMenuItem asChild>
+                <Link href="/perfil">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Perfil</span>
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Configuración</span>
+              <DropdownMenuItem asChild>
+                <Link href="/configuracion">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Configuración</span>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Cerrar Sesión</DropdownMenuItem>
+              <DropdownMenuItem onClick={logout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Cerrar Sesión</span>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
