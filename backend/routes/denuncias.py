@@ -11,7 +11,7 @@ from schemas.denuncias import DenunciaCreate, DenunciaResponse, DenunciaDetalleR
 from schemas.evidencias import EvidenciaResponseGeoJSON, FotoInfo
 from schemas.analisis import AnalisisResponseGeoJSON, ResultadoAnalisisResponse
 from security.auth import verificar_token
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 import json
 
@@ -27,6 +27,7 @@ def get_db():
 # Schema para cambio de estado
 class CambioEstadoRequest(BaseModel):
     id_estado: int
+    observaciones: Optional[str] = None
 
 @router.post("/", response_model=DenunciaResponse, dependencies=[Depends(verificar_token)])
 def crear_denuncia(denuncia: DenunciaCreate, db: Session = Depends(get_db)):
@@ -120,13 +121,19 @@ def obtener_detalles_denuncia(
     analisis_geojson = []
     for analisis in analisis_list:
         try:
-            # Obtener resultados del análisis
+            # Obtener resultados del análisis con datos de concesiones
             resultados_sql = text("""
                 SELECT 
                     ra.id_concesion,
                     ra.interseccion_valida,
-                    ra.distancia_minima
+                    ra.distancia_minima,
+                    c.codigo_centro,
+                    c.nombre,
+                    c.titular,
+                    c.tipo,
+                    c.region
                 FROM resultado_analisis ra
+                LEFT JOIN concesiones c ON ra.id_concesion = c.id_concesion
                 WHERE ra.id_analisis = :id_analisis
             """)
             
@@ -136,7 +143,12 @@ def obtener_detalles_denuncia(
                 ResultadoAnalisisResponse(
                     id_concesion=row.id_concesion,
                     interseccion_valida=row.interseccion_valida,
-                    distancia_minima=row.distancia_minima
+                    distancia_minima=row.distancia_minima,
+                    codigo_centro=str(row.codigo_centro) if row.codigo_centro else None,
+                    nombre=row.nombre,
+                    titular=row.titular,
+                    tipo=row.tipo,
+                    region=row.region
                 ) for row in resultados
             ]
             
@@ -144,8 +156,8 @@ def obtener_detalles_denuncia(
             buffer_geojson = None
             if analisis.buffer_geom:
                 try:
-                    # Convertir WKBElement a string WKB primero
-                    buffer_wkb = str(analisis.buffer_geom)
+                    # Usar el método correcto de GeoAlchemy2 para obtener WKB
+                    buffer_wkb = bytes(analisis.buffer_geom)
                     buffer_json = db.execute(
                         text("SELECT ST_AsGeoJSON(ST_GeomFromWKB(:buffer_wkb))"),
                         {"buffer_wkb": buffer_wkb}
@@ -255,8 +267,11 @@ def cambiar_estado_denuncia(
             detail="Estado no encontrado"
         )
     
-    # Actualizar el estado
+    # Actualizar el estado y observaciones
     denuncia.id_estado = cambio_estado.id_estado
+    if cambio_estado.observaciones:
+        denuncia.observaciones = cambio_estado.observaciones
+    
     db.commit()
     db.refresh(denuncia)
     

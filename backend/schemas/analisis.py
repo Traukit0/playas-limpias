@@ -12,6 +12,11 @@ class ResultadoAnalisisResponse(BaseModel):
     id_concesion: int
     interseccion_valida: bool
     distancia_minima: Optional[float]
+    codigo_centro: Optional[str] = None
+    nombre: Optional[str] = None
+    titular: Optional[str] = None
+    tipo: Optional[str] = None
+    region: Optional[str] = None
 
 class AnalisisResponseGeoJSON(BaseModel):
     id_analisis: int
