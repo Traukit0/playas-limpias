@@ -1,4 +1,5 @@
 .env
+.env.local
 estructura_y_resumen.txt
 # Entornos virtuales de Python
 backend/backend_venv/

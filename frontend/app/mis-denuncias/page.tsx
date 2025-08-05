@@ -258,7 +258,7 @@ export default function MisDenunciasPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => router.push(`/nueva-inspeccion?id=${denuncia.id_denuncia}`)}
+                      onClick={() => router.push(`/denuncia/${denuncia.id_denuncia}`)}
                     >
                       Ver Detalles
                     </Button>

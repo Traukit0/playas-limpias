@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Dict, Any
+from schemas.evidencias import EvidenciaResponseGeoJSON, FotoInfo
+from schemas.analisis import AnalisisResponseGeoJSON
 
 class DenunciaBase(BaseModel):
     id_usuario: int
@@ -19,3 +21,14 @@ class DenunciaResponse(DenunciaBase):
 
     class Config:
         orm_mode = True
+
+class DenunciaDetalleResponse(DenunciaResponse):
+    """
+    Respuesta detallada de una denuncia incluyendo evidencias y análisis
+    """
+    evidencias: List[EvidenciaResponseGeoJSON] = []
+    analisis: List[AnalisisResponseGeoJSON] = []
+    fotos: List[FotoInfo] = []
+    total_evidencias: int = 0
+    total_analisis: int = 0
+    total_fotos: int = 0
