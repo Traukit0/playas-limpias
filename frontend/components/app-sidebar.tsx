@@ -45,9 +45,9 @@ const menuItems = [
     href: "/reportes",
   },
   {
-    title: "Configuración",
+    title: "Mis Denuncias",
     icon: Settings,
-    href: "/configuracion",
+    href: "/mis-denuncias",
   },
 ]
 
@@ -133,9 +133,9 @@ export function AppSidebar() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/configuracion">
+                <Link href="/mis-denuncias">
                   <Settings className="mr-2 h-4 w-4" />
-                  <span>Configuración</span>
+                  <span>Mis Denuncias</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />

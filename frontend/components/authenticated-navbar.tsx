@@ -116,9 +116,9 @@ export function AuthenticatedNavbar() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/configuracion" className="flex items-center cursor-pointer">
+                <Link href="/mis-denuncias" className="flex items-center cursor-pointer">
                   <Settings className="mr-2 h-4 w-4" />
-                  <span>Configuración</span>
+                  <span>Mis Denuncias</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
