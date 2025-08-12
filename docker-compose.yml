@@ -17,6 +17,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./backend:/app
+      - ./logs/backend:/app/backend/logs/backend
     environment:
       - PYTHONUNBUFFERED=1
     ports:

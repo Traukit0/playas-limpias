@@ -10,6 +10,9 @@ from shapely.geometry import shape
 from security.auth import verificar_token
 from services.foto_service import FotoService
 from typing import List
+import logging
+import time
+from logging_utils import log_event
 import json as pyjson
 from services.geoprocessing.gpx.gpx_parser import procesar_gpx_waypoints
 
@@ -102,7 +105,23 @@ def subir_archivo_gpx(
     if not archivo_gpx.filename.endswith(".gpx"):
         raise HTTPException(status_code=400, detail="El archivo debe tener extensión .gpx")
 
+    start = time.perf_counter()
     resultado = procesar_gpx_waypoints(archivo_gpx, id_denuncia, db, utc_offset)
+    # Extraer cantidad de waypoints desde el mensaje de detalle si está disponible
+    waypoints_count = None
+    try:
+        detalle = resultado.get("detalle") if isinstance(resultado, dict) else None
+        if isinstance(detalle, str) and "waypoints" in detalle:
+            # p.ej. "12 waypoints procesados..."
+            import re
+            m = re.search(r"(\d+)\s+waypoints", detalle)
+            if m:
+                waypoints_count = int(m.group(1))
+    except Exception:
+        waypoints_count = None
+    log_event(logging.getLogger("wizard"), "INFO", "wizard_step2_gpx_uploaded",
+              denuncia_id=id_denuncia, filename=archivo_gpx.filename, utc_offset=utc_offset,
+              waypoints_count=waypoints_count, duration_ms=int((time.perf_counter()-start)*1000))
     return resultado
 
 @router.post("/upload_fotos/{id_denuncia}", response_model=SubidaFotosResponse, dependencies=[Depends(verificar_token)])
@@ -149,7 +168,18 @@ def subir_fotos_denuncia(
                 raise HTTPException(status_code=400, detail="El campo 'descripciones' debe ser un array real o un string separado por saltos de línea (uno por foto). No se aceptan separadores por comas. Si usas Swagger, agrega cada comentario como un campo individual o separa por salto de línea.")
     if len(archivos) != len(descripciones):
         raise HTTPException(status_code=400, detail="Debe enviar una descripción por cada foto (campos 'descripciones' y 'archivos' deben tener la misma cantidad de elementos).")
+    start = time.perf_counter()
     resultado = foto_service.subir_fotos_denuncia(db, id_denuncia, archivos, descripciones)
+    try:
+        processed = int(resultado.get("fotos_procesadas", 0))
+        associated = int(resultado.get("fotos_asociadas", 0))
+        errors = len(resultado.get("errores", [])) if isinstance(resultado.get("errores"), list) else 0
+    except Exception:
+        processed = associated = errors = 0
+    log_event(logging.getLogger("wizard"), "INFO", "wizard_step3_photos_uploaded",
+              denuncia_id=id_denuncia, files_count=len(archivos), processed=processed,
+              associated=associated, errors_count=errors,
+              duration_ms=int((time.perf_counter()-start)*1000))
     return SubidaFotosResponse(**resultado)
 
 @router.get("/fotos/{id_denuncia}", response_model=ListaFotosResponse, dependencies=[Depends(verificar_token)])

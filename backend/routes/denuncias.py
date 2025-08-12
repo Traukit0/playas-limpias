@@ -12,6 +12,9 @@ from schemas.evidencias import EvidenciaResponseGeoJSON, FotoInfo
 from schemas.analisis import AnalisisResponseGeoJSON, ResultadoAnalisisResponse
 from security.auth import verificar_token
 from typing import List, Optional
+import logging
+import time
+from logging_utils import log_event
 from pydantic import BaseModel
 import json
 
@@ -31,6 +34,7 @@ class CambioEstadoRequest(BaseModel):
 
 @router.post("/", response_model=DenunciaResponse, dependencies=[Depends(verificar_token)])
 def crear_denuncia(denuncia: DenunciaCreate, db: Session = Depends(get_db)):
+    start = time.perf_counter()
     usuario = db.query(Usuario).filter(Usuario.id_usuario == denuncia.id_usuario).first()
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
@@ -43,6 +47,10 @@ def crear_denuncia(denuncia: DenunciaCreate, db: Session = Depends(get_db)):
     db.add(nueva)
     db.commit()
     db.refresh(nueva)
+    # Log wizard paso 1
+    log_event(logging.getLogger("wizard"), "INFO", "wizard_step1_denuncia_created",
+              denuncia_id=nueva.id_denuncia, user_id=nueva.id_usuario, estado_id=nueva.id_estado,
+              duration_ms=int((time.perf_counter()-start)*1000))
     return nueva
 
 @router.get("/", response_model=List[DenunciaResponse], dependencies=[Depends(verificar_token)])

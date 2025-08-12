@@ -16,6 +16,8 @@ from services.geoprocessing.interseccion import intersectar_concesiones
 from services.map_generator import MapGenerator
 from services.kmz_generator import KMZGenerator
 from datetime import datetime
+import time
+from logging_utils import log_event
 from typing import List
 import json
 import tempfile
@@ -36,6 +38,7 @@ def get_db():
 
 @router.post("/", response_model=AnalisisResponseGeoJSON, dependencies=[Depends(verificar_token)])
 def ejecutar_analisis(data: AnalisisCreate, db: Session = Depends(get_db)):
+    start = time.perf_counter()
     denuncia = db.query(Denuncia).filter(Denuncia.id_denuncia == data.id_denuncia).first()
     if not denuncia:
         raise HTTPException(status_code=404, detail="Denuncia no encontrada")
@@ -89,6 +92,16 @@ def ejecutar_analisis(data: AnalisisCreate, db: Session = Depends(get_db)):
         text("SELECT ST_AsGeoJSON(buffer_geom) FROM analisis_denuncia WHERE id_analisis = :id"),
         {"id": nuevo_analisis.id_analisis}
     ).scalar()
+    # Log wizard paso 4
+    try:
+        intersections_count = len(resultados)
+    except Exception:
+        intersections_count = 0
+    log_event(logging.getLogger("wizard"), "INFO", "wizard_step4_analysis_done",
+              analisis_id=nuevo_analisis.id_analisis, denuncia_id=nuevo_analisis.id_denuncia,
+              distancia_buffer_m=nuevo_analisis.distancia_buffer,
+              intersections_count=intersections_count,
+              duration_ms=int((time.perf_counter()-start)*1000))
 
     return AnalisisResponseGeoJSON(
         id_analisis=nuevo_analisis.id_analisis,
@@ -231,6 +244,7 @@ async def generar_pdf_analisis(
         from services.pdf_generator import PDFGenerator
         
         pdf_generator = PDFGenerator()
+        start = time.perf_counter()
         pdf_bytes = await pdf_generator.generate_analysis_pdf(
             analisis=analisis,
             denuncia=denuncia,
@@ -261,6 +275,10 @@ async def generar_pdf_analisis(
         sector_name = denuncia.lugar if denuncia else "sector"
         filename = f"inspeccion_{sector_name.replace(' ', '_')}_{id_analisis}.pdf"
         
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        log_event(logging.getLogger("wizard"), "INFO", "wizard_step5_pdf_generated",
+                  analisis_id=id_analisis, output_bytes=len(pdf_bytes), duration_ms=duration_ms)
+
         return FileResponse(
             path=temp_path,
             media_type="application/pdf",
@@ -416,6 +434,7 @@ async def generar_kmz_analisis(
         
         # 5. Generar KMZ
         kmz_generator = KMZGenerator()
+        start = time.perf_counter()
         kmz_bytes = await kmz_generator.generate_analysis_kmz(
             analisis=analisis,
             evidencias=evidencias,
@@ -442,6 +461,10 @@ async def generar_kmz_analisis(
         # 9. Retornar archivo para descarga
         filename = f"inspeccion_analisis_{id_analisis}.kmz"
         
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        log_event(logging.getLogger("wizard"), "INFO", "wizard_step5_kmz_generated",
+                  analisis_id=id_analisis, output_bytes=len(kmz_bytes), duration_ms=duration_ms)
+
         return FileResponse(
             path=temp_path,
             media_type="application/vnd.google-earth.kmz",
