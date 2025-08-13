@@ -128,10 +128,10 @@ export default function LoginPage() {
                   <span className="text-white font-bold text-xl">PL</span>
                 </div>
               </div>
-              <CardTitle className="text-2xl font-bold text-center">
+              <CardTitle className="text-2xl font-bold text-center text-slate-100">
                 Iniciar Sesión
               </CardTitle>
-              <CardDescription className="text-center">
+              <CardDescription className="text-center text-slate-300">
                 Sistema de Inspecciones en Playas Limpias
               </CardDescription>
             </CardHeader>
@@ -144,7 +144,7 @@ export default function LoginPage() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-slate-200">Email</Label>
                   <Input
                     id="email"
                     type="email"
@@ -157,7 +157,7 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password">Contraseña</Label>
+                  <Label htmlFor="password" className="text-slate-200">Contraseña</Label>
                   <div className="relative">
                     <Input
                       id="password"
@@ -201,12 +201,12 @@ export default function LoginPage() {
                 </Button>
 
                 <div className="text-center text-sm">
-                  <span className="text-muted-foreground">
+                  <span className="text-slate-300/80">
                     ¿No tienes una cuenta?{" "}
                   </span>
                   <Link
                     href="/auth/register"
-                    className="text-blue-600 hover:underline font-medium"
+                    className="text-sky-300 hover:text-sky-200 underline-offset-2 hover:underline font-medium"
                   >
                     Regístrate aquí
                   </Link>
