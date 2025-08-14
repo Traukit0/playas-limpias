@@ -125,171 +125,183 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            {/* Logo o ícono */}
-            <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-xl">PL</span>
-            </div>
-          </div>
-          <CardTitle className="text-2xl font-bold text-center">
-            Crear Cuenta
-          </CardTitle>
-          <CardDescription className="text-center">
-            Únete al Sistema de Inspecciones en Playas Limpias
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+    <div className="relative min-h-screen">
+      {/* Fondo con imagen + overlay para legibilidad */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[url('/login_portada.png')] bg-cover bg-center" />
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-slate-900/50 to-slate-900/30" />
+      </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre completo</Label>
-              <div className="relative">
-                <Input
-                  id="nombre"
-                  type="text"
-                  placeholder="Juan Pérez"
-                  value={formData.nombre}
-                  onChange={(e) => handleInputChange("nombre", e.target.value)}
-                  required
-                  disabled={isLoading}
-                />
-                {formData.nombre && (
-                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                    {validations.nombre ? (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+      {/* Contenido principal centrado */}
+      <div className="relative z-10 flex min-h-screen items-center justify-center p-4">
+        <Card className="w-full max-w-md rounded-3xl border border-white/20 bg-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-2xl backdrop-saturate-150 ring-1 ring-white/10 supports-[backdrop-filter]:backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/30 dark:ring-white/10">
+          <CardHeader className="space-y-1">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-600/30">
+                <span className="text-white font-bold text-xl">PL</span>
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-bold text-center text-slate-100">
+              Crear Cuenta
+            </CardTitle>
+            <CardDescription className="text-center text-slate-300">
+              Únete al Sistema de Inspecciones en Playas Limpias
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="nombre" className="text-slate-200">Nombre completo</Label>
+                <div className="relative">
+                  <Input
+                    id="nombre"
+                    type="text"
+                    placeholder="Juan Pérez"
+                    value={formData.nombre}
+                    onChange={(e) => handleInputChange("nombre", e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="bg-white/10 border-white/20 text-slate-100 placeholder:text-slate-300/60 focus-visible:ring-2 focus-visible:ring-sky-400/50 focus-visible:border-sky-300/40"
+                  />
+                  {formData.nombre && (
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                      {validations.nombre ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <span className="text-red-500 text-xs">Min. 2 caracteres</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-slate-200">Email</Label>
+                <div className="relative">
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="tu.email@ejemplo.com"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="bg-white/10 border-white/20 text-slate-100 placeholder:text-slate-300/60 focus-visible:ring-2 focus-visible:ring-sky-400/50 focus-visible:border-sky-300/40"
+                  />
+                  {formData.email && (
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                      {validations.email ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <span className="text-red-500 text-xs">Email inválido</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-slate-200">Contraseña</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="bg-white/10 border-white/20 text-slate-100 placeholder:text-slate-300/60 focus-visible:ring-2 focus-visible:ring-sky-400/50 focus-visible:border-sky-300/40"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-slate-300 hover:text-slate-100"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
                     ) : (
-                      <span className="text-red-500 text-xs">Min. 2 caracteres</span>
+                      <Eye className="h-4 w-4" />
                     )}
-                  </div>
+                  </Button>
+                </div>
+                {formData.password && !validations.password && (
+                  <p className="text-xs text-red-500">Mínimo 6 caracteres</p>
                 )}
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="tu.email@ejemplo.com"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  required
-                  disabled={isLoading}
-                />
-                {formData.email && (
-                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                    {validations.email ? (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="text-slate-200">Confirmar contraseña</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={formData.confirmPassword}
+                    onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="bg-white/10 border-white/20 text-slate-100 placeholder:text-slate-300/60 focus-visible:ring-2 focus-visible:ring-sky-400/50 focus-visible:border-sky-300/40"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-slate-300 hover:text-slate-100"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    disabled={isLoading}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
                     ) : (
-                      <span className="text-red-500 text-xs">Email inválido</span>
+                      <Eye className="h-4 w-4" />
                     )}
-                  </div>
+                  </Button>
+                </div>
+                {formData.confirmPassword && !validations.confirmPassword && (
+                  <p className="text-xs text-red-500">Las contraseñas no coinciden</p>
                 )}
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
-                  required
-                  disabled={isLoading}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-              {formData.password && !validations.password && (
-                <p className="text-xs text-red-500">Mínimo 6 caracteres</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={formData.confirmPassword}
-                  onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                  required
-                  disabled={isLoading}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  disabled={isLoading}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-              {formData.confirmPassword && !validations.confirmPassword && (
-                <p className="text-xs text-red-500">Las contraseñas no coinciden</p>
-              )}
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading || !allValid}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creando cuenta...
-                </>
-              ) : (
-                "Crear Cuenta"
-              )}
-            </Button>
-
-            <div className="text-center text-sm">
-              <span className="text-muted-foreground">
-                ¿Ya tienes una cuenta?{" "}
-              </span>
-              <Link
-                href="/auth/login"
-                className="text-blue-600 hover:underline font-medium"
+              <Button
+                type="submit"
+                className="w-full bg-sky-600/90 hover:bg-sky-500 text-white border border-white/10 shadow-lg shadow-sky-900/20"
+                disabled={isLoading || !allValid}
               >
-                Inicia sesión aquí
-              </Link>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creando cuenta...
+                  </>
+                ) : (
+                  "Crear Cuenta"
+                )}
+              </Button>
+
+              <div className="text-center text-sm">
+                <span className="text-slate-300/80">
+                  ¿Ya tienes una cuenta?{" "}
+                </span>
+                <Link
+                  href="/auth/login"
+                  className="text-sky-300 hover:text-sky-200 underline-offset-2 hover:underline font-medium"
+                >
+                  Inicia sesión aquí
+                </Link>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

@@ -153,6 +153,7 @@ export default function LoginPage() {
                     onChange={(e) => handleInputChange("email", e.target.value)}
                     required
                     disabled={isLoading}
+                    className="bg-white/10 border-white/20 text-slate-100 placeholder:text-slate-300/60 focus-visible:ring-2 focus-visible:ring-sky-400/50 focus-visible:border-sky-300/40"
                   />
                 </div>
 
@@ -167,12 +168,13 @@ export default function LoginPage() {
                       onChange={(e) => handleInputChange("password", e.target.value)}
                       required
                       disabled={isLoading}
+                      className="bg-white/10 border-white/20 text-slate-100 placeholder:text-slate-300/60 focus-visible:ring-2 focus-visible:ring-sky-400/50 focus-visible:border-sky-300/40"
                     />
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-slate-300 hover:text-slate-100"
                       onClick={() => setShowPassword(!showPassword)}
                       disabled={isLoading}
                     >
@@ -187,7 +189,7 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full bg-sky-600/90 hover:bg-sky-500 text-white border border-white/10 shadow-lg shadow-sky-900/20"
                   disabled={isLoading || !formData.email || !formData.password}
                 >
                   {isLoading ? (
