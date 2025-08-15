@@ -1,10 +1,19 @@
-import type { Metadata } from "next"
-import { InspectionWizard } from "@/components/inspection-wizard"
+"use client"
 
-export const metadata: Metadata = {
-  title: "Nueva Inspección | Sistema de Inspecciones en Playas",
-  description: "Crear una nueva inspección de playa",
-}
+import dynamic from "next/dynamic"
+
+// Importación dinámica para evitar problemas de SSR con Leaflet
+const InspectionWizard = dynamic(() => import("@/components/inspection-wizard").then(mod => ({ default: mod.InspectionWizard })), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-64">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-muted-foreground">Cargando wizard de inspección...</p>
+      </div>
+    </div>
+  )
+})
 
 export default function NuevaInspeccionPage() {
   return (

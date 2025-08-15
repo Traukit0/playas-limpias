@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 
-export default function LoginPage() {
+function LoginContent() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -218,5 +218,33 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="relative min-h-screen">
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-[url('/login_portada.png')] bg-cover bg-center" />
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-slate-900/50 to-slate-900/30" />
+        </div>
+        <div className="relative z-10 flex min-h-screen items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-3xl border border-white/20 bg-white/5 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-3xl backdrop-saturate-150 ring-1 ring-white/10 p-8">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-600/30">
+                <span className="text-white font-bold text-xl">PL</span>
+              </div>
+            </div>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-slate-100 mb-2">Cargando...</h1>
+              <p className="text-slate-300">Iniciando sesión</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }
