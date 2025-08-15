@@ -134,7 +134,7 @@ export default function RegisterPage() {
 
       {/* Contenido principal centrado */}
       <div className="relative z-10 flex min-h-screen items-center justify-center p-4">
-        <Card className="w-full max-w-md rounded-3xl border border-white/20 bg-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-2xl backdrop-saturate-150 ring-1 ring-white/10 supports-[backdrop-filter]:backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/30 dark:ring-white/10">
+        <Card className="w-full max-w-md rounded-3xl border border-white/20 bg-white/5 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-2xl backdrop-saturate-150 ring-1 ring-white/10 supports-[backdrop-filter]:backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/30 dark:ring-white/10">
           <CardHeader className="space-y-1">
             <div className="flex items-center justify-center mb-4">
               <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-600/30">

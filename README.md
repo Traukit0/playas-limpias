@@ -1,47 +1,56 @@
-# Playas Limpias - Plataforma para monitoreo ambiental de los residuos provenientes de la acuicultura
+# Playas Limpias - Plataforma para monitoreo ambiental de residuos de la acuicultura
 
-## Descripción del Proyecto
+## Descripción
 
-Playas Limpias es un proyecto nacido de la necesidad de contar con una herramienta informática que permita crear instrumentos de análisis para determinar en un corto período de tiempo responsables de limpiar playas contaminadas por residuos de la acuicultura. 
+Playas Limpias es una plataforma que facilita el registro, seguimiento y análisis geoespacial de denuncias por residuos de la acuicultura en playas. Busca aportar insumos claros y oportunos para identificar responsables de limpieza y apoyar la toma de decisiones.
 
-En la región de los lagos, provincia de Chiloé, la contaminación por residuos de la acuicultura en playas es uno de los principales problemas ambientales que aquejan a la región. En función de la normativa ambiental vigente, y considerando las herramientas actuales existentes para determinar responsables de ejecutar limpieza en playas, se requiere contar con una plataforma de fácil uso, intuitiva y confiable, que entregue insumos para ejecutar análisis de forma rápida a fin de acortar los tiempos de respuesta a denuncias ambientales.
+## Componentes del proyecto
 
-## Stack Tecnológico
+### 🧱 Backend (API + análisis geoespacial)
 
-El proyecto se desarrollará utilizando las siguientes tecnologías:
+- **Framework**: FastAPI (Python)
+- **Base de datos**: PostgreSQL + PostGIS
+- **ORM**: SQLAlchemy + GeoAlchemy2
+- **Geoprocesamiento**: Shapely; soporte de tracks GPX
+- **Autenticación**: JWT
+- **Servicios**: manejo de fotos, generación de reportes PDF/KMZ y mapas estáticos
 
-## 🧱 Backend (procesamiento geoespacial + API)
+Rutas principales expuestas: `auth`, `usuarios`, `denuncias`, `evidencias`, `concesiones`, `analisis`, `estados_denuncia`.
 
-| Tecnología                 | Rol                        | Comentarios                                                                 |
-|---------------------------|----------------------------|------------------------------------------------------------------------------|
-| PostgreSQL + PostGIS      | Base de datos geoespacial  | Estándar de facto para datos espaciales; permite consultas geográficas complejas. |
-| Python + FastAPI          | API RESTful moderna        | Muy rápido, fácil de documentar con OpenAPI, perfecto para microservicios.  |
-| SQLAlchemy + GeoAlchemy2  | ORM para PostGIS           | Facilita trabajar con geometrías desde Python.                              |
-| GDAL / Fiona / Shapely    | Procesamiento geoespacial  | Manipulación avanzada de capas vectoriales y raster.                        |
+### 🗺️ Frontend (web)
 
-## 🗺️ Frontend (visualización cartográfica interactiva)
+- **Framework**: Next.js + React
+- **Mapas**: Leaflet con React Leaflet
+- **UI**: Tailwind CSS y componentes basados en Radix
+- **Autenticación**: NextAuth
 
-| Tecnología                          | Rol                               | Comentarios                                                                 |
-|-------------------------------------|------------------------------------|------------------------------------------------------------------------------|
-| React                               | Framework moderno frontend         | Componentes reutilizables, fácil integración con bibliotecas JS de mapas.   |
-| Leaflet.js                          | Mapas interactivos 2D             | Ligero y muy compatible con React. Alternativa moderna: MapLibre (fork de Mapbox GL). |
-| react-leaflet / maplibre-gl-js      | Integración de mapas en React     | Permite capas, markers, rutas, popup de fotos, etc.                          |
-| deck.gl                             | Visualización geoespacial avanzada| Para capas complejas o animaciones (heatmaps, trayectorias 3D).             |
-| React Dropzone / FilePond           | Subida de archivos (fotos, tracks)| Para UI amigable al subir imágenes y GPX/KML.                                |
+### 📦 Infraestructura
 
-## 📦 DevOps / Infraestructura
+- **Orquestación**: Docker Compose (servicios `db`, `backend`, `frontend`)
+- **Imágenes/puertos**: PostGIS (5432), FastAPI (8000), Next.js (3000)
+- **Archivos y volúmenes**: persistencia de base de datos (`pg_data`) y logs del backend
 
-| Tecnología                       | Rol                                         | Comentarios                                                                 |
-|----------------------------------|----------------------------------------------|------------------------------------------------------------------------------|
-| Docker + Docker Compose          | Contenerización del stack                   | Portabilidad y despliegue en servidores o nube.                             |
-| NGINX                            | Proxy y servidor de archivos estáticos      | Frontend, fotos e incluso tiles si los necesitas servir tú.                |
-| Cloudflare Tunnel / Tailscale    | Acceso remoto seguro en red local           | Evita abrir puertos o complicarte con redes.                               |
-| S3 (MinIO o AWS)                 | Almacenamiento de imágenes/fotos GPS        | Ideal para centralizar fotos georreferenciadas.                            |
-| Supabase (opcional)              | Reemplazo cloud para PostGIS + API + Auth   | Para un enfoque Backend as a Service (BaaS).                               |
+## Funcionalidades clave
 
-## 📌 Documentos del proyecto
+- Registro y gestión de denuncias ambientales
+- Carga y consulta de evidencias fotográficas
+- Análisis geoespacial para cruce con concesiones y áreas de interés
+- Generación de reportes en PDF y archivos KMZ
+- Visualización de información en mapas interactivos
 
-- [Bitácora de avances](./BITACORA.md)
+## Estructura del repositorio
 
+- `backend/`: API FastAPI, modelos, rutas, servicios y plantillas de reportes
+- `frontend/`: aplicación Next.js, vistas, componentes y mapas
+- `db/`: scripts y definición de esquema (`schema_bd.sql`)
+- `docker-compose.yml`: orquestación de servicios
+- `logs/`: registros de ejecución del backend
 
-## Este es un proyecto en curso
+## Documentos
+
+- `BITACORA.md` y carpeta `bitacora/`: registro de avances
+- `ANALISIS_TECNICO_COMPLETO.md`: detalles técnicos y arquitectura
+
+---
+
+Este es un proyecto en curso.
