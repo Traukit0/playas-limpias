@@ -9,6 +9,7 @@ Este documento centraliza el seguimiento del progreso del proyecto, organizado p
 - [SPRINT 01 - 23/06 al 06/07](./bitacora/sprint_01.md) ✅
 - [SPRINT 02 - 07/07 al 20/07](./bitacora/sprint_02.md) ✅
 - [SPRINT 03 - 21/07 al 03/08](./bitacora/sprint_03.md) ✅
+- [SPRINT 04 - 04/08 al 17/08](./bitacora/sprint_04.md) ✅
 
 ---
 
