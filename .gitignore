@@ -2,6 +2,9 @@
 .env.local
 estructura_y_resumen.txt
 app.log
+backend/logs/
+backend/logs/backend/
+backend/logs/backend/app.log
 # Entornos virtuales de Python
 backend/backend_venv/
 venv/
