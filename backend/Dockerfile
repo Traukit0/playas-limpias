@@ -10,6 +10,9 @@ COPY requirements.txt .
 # Instala las dependencias
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Establece la zona horaria
+ENV TZ=America/Santiago
+
 # Copia el resto del código fuente
 COPY . .
 

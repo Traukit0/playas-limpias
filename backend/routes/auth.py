@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from db import SessionLocal
 from models.usuarios import Usuario
 from schemas.usuarios import (
@@ -63,7 +63,7 @@ async def get_current_user(
         )
     
     # Actualizar último acceso
-    user.ultimo_acceso = datetime.utcnow()
+    user.ultimo_acceso = datetime.now(timezone.utc)
     db.commit()
     
     return user
@@ -90,7 +90,7 @@ async def register_user(user_data: UsuarioRegister, db: Session = Depends(get_db
         nombre=user_data.nombre,
         email=user_data.email,
         password_hash=hashed_password,
-        fecha_registro=datetime.utcnow(),
+        fecha_registro=datetime.now(timezone.utc),
         activo=True
     )
     
@@ -135,7 +135,7 @@ async def login_user(user_credentials: UsuarioLogin, db: Session = Depends(get_d
         )
     
     # Actualizar último acceso
-    user.ultimo_acceso = datetime.utcnow()
+    user.ultimo_acceso = datetime.now(timezone.utc)
     db.commit()
     
     logger.info(f"Usuario autenticado: {user.email}")

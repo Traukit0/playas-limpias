@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Inspección - Playas Limpias</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12pt;
+            color: #333;
+        }
+
+        h1 {
+            font-size: 22pt;
+            font-weight: bold;
+            color: #1976d2;
+            text-align: center;
+            margin-bottom: 20pt;
+            padding: 15pt;
+            background-color: #e3f2fd;
+            border: 2pt solid #1976d2;
+        }
+
+        h2 {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #1976d2;
+            margin-top: 15pt;
+            margin-bottom: 8pt;
+            padding: 8pt;
+            background-color: #f3f9ff;
+            border-left: 3pt solid #1976d2;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12pt;
+            font-size: 9pt;
+            table-layout: fixed;
+        }
+
+        table th {
+            background-color: #1976d2;
+            color: white;
+            padding: 8pt;
+            text-align: center;
+            font-weight: bold;
+            border: 1pt solid #0d47a1;
+            word-wrap: break-word;
+        }
+
+        table td {
+            padding: 6pt;
+            border: 1pt solid #e0e0e0;
+            vertical-align: middle;
+            text-align: center;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .info-card {
+            border: 1pt solid #e0e0e0;
+            padding: 10pt;
+            margin: 8pt 0;
+            background-color: #fafafa;
+        }
+
+        .metric-box {
+            width: 100%;
+            padding: 18pt;
+            text-align: center;
+            min-height: 90pt;
+            display: block;
+            border-radius: 4pt;
+        }
+
+        .metric-box-blue {
+            border: 2pt solid #1976d2;
+            background-color: #e3f2fd;
+        }
+
+        .metric-box-green {
+            border: 2pt solid #4caf50;
+            background-color: #e8f5e8;
+        }
+
+        .metric-box-orange {
+            border: 2pt solid #ff9800;
+            background-color: #fff3e0;
+        }
+
+        .metric-box-purple {
+            border: 2pt solid #9c27b0;
+            background-color: #f3e5f5;
+        }
+
+        .metric-value {
+            font-size: 20pt;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 8pt;
+            line-height: 1.2;
+        }
+
+        .metric-value-blue { color: #1976d2; }
+        .metric-value-green { color: #4caf50; }
+        .metric-value-orange { color: #ff9800; }
+        .metric-value-purple { color: #9c27b0; }
+
+        .metric-label {
+            font-size: 11pt;
+            color: #666;
+            font-weight: bold;
+            line-height: 1.3;
+            display: block;
+        }
+
+        .clearfix {
+            clear: both;
+        }
+
+        .evidence-container {
+            width: 100%;
+            overflow: hidden;
+            margin: 15pt 0;
+        }
+
+        .info-left {
+            float: left;
+            width: 47%;
+            margin-right: 3%;
+        }
+
+        .info-right {
+            float: left;
+            width: 47%;
+        }
+
+                .evidence-box {
+            width: 100%;
+            margin: 0 0 12pt 0;
+            border: 1pt solid #e0e0e0;
+            background-color: white;
+            border-radius: 4pt;
+            overflow: hidden;
+        }
+
+        .evidence-header {
+            font-weight: bold;
+            color: white;
+            background-color: #1976d2;
+            padding: 6pt;
+            margin: 0;
+            text-align: center;
+            font-size: 10pt;
+        }
+
+                 .evidence-photo {
+             display: block;
+             margin: 0 auto;
+             border: none;
+         }
+
+                 .evidence-photo-container {
+             width: 100%;
+             text-align: center;
+             background-color: #f5f5f5;
+             padding: 8pt;
+             min-height: 100pt;
+             position: relative;
+         }
+
+         .evidence-no-photo {
+             color: #999;
+             font-style: italic;
+             font-size: 9pt;
+             padding: 12pt;
+             border: 1pt dashed #ccc;
+             background-color: #fafafa;
+             border-radius: 3pt;
+         }
+
+                 .evidence-details {
+             padding: 6pt;
+             background-color: #fafafa;
+             border-top: 1pt solid #e0e0e0;
+         }
+
+                 .evidence-info-row {
+             margin-bottom: 4pt;
+             font-size: 8pt;
+             line-height: 1.2;
+         }
+
+         .evidence-info-label {
+             font-weight: bold;
+             color: #1976d2;
+             display: inline-block;
+             width: 70pt;
+         }
+
+         .evidence-info-value {
+             color: #333;
+             font-weight: normal;
+         }
+
+                 .evidence-coords {
+             font-family: "Courier New", monospace;
+             font-size: 8pt;
+             color: #1976d2;
+             background-color: #e3f2fd;
+             padding: 4pt;
+             margin: 4pt 0 0 0;
+             border: 1pt solid #1976d2;
+             border-radius: 2pt;
+             text-align: center;
+             font-weight: bold;
+         }
+
+         .badge {
+             display: inline-block;
+             padding: 2pt 6pt;
+             font-size: 8pt;
+             font-weight: bold;
+             border-radius: 2pt;
+         }
+
+        .badge-success {
+            background-color: #4caf50;
+            color: white;
+            border: 1pt solid #388e3c;
+        }
+
+        .badge-info {
+            background-color: #2196f3;
+            color: white;
+            border: 1pt solid #1976d2;
+        }
+
+        .badge-error {
+            background-color: #f44336;
+            color: white;
+            border: 1pt solid #d32f2f;
+        }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .font-bold { font-weight: bold; }
+        .font-mono { font-family: "Courier New", monospace; }
+        .text-muted { color: #666; }
+        .text-primary { color: #1976d2; }
+
+        .page-break { page-break-before: always; }
+
+        .section-divider {
+            border: none;
+            height: 2pt;
+            background-color: #1976d2;
+            margin: 15pt 0;
+        }
+
+        .row-gray {
+            background-color: #f8f9fa;
+        }
+
+        .row-white {
+            background-color: white;
+        }
+
+                 .info-label {
+             font-weight: bold;
+             color: #424242;
+             width: 35%;
+             background-color: #f5f5f5;
+             text-align: left;
+             padding-left: 8pt;
+         }
+
+         .info-value {
+             color: #333;
+             text-align: left;
+             padding-left: 8pt;
+         }
+    </style>
+</head>
+<body>
+    <h1>REPORTE DE INSPECCIÓN<br/>Sistema de Monitoreo Costero - Playas Limpias</h1>
+    
+         <div class="info-left">
+         <table style="font-size: 10pt;">
+             <tr>
+                 <td class="info-label">ID de Análisis</td>
+                 <td class="info-value" style="font-family: 'Courier New', monospace; font-weight: bold; color: #1976d2;">#{{ analisis.id_analisis }}</td>
+             </tr>
+             <tr>
+                 <td class="info-label">Fecha de Generación</td>
+                 <td class="info-value">{{ fecha_generacion.strftime('%d de %B de %Y a las %H:%M') }}</td>
+             </tr>
+             <tr>
+                 <td class="info-label">Inspector</td>
+                 <td class="info-value" style="font-weight: bold;">{{ usuario.nombre }}</td>
+             </tr>
+         </table>
+     </div>
+     <div class="info-right">
+         <table style="font-size: 10pt;">
+             <tr>
+                 <td class="info-label">Estado</td>
+                 <td class="info-value">
+                     <span class="badge badge-success">{{ estado.estado }}</span>
+                 </td>
+             </tr>
+             <tr>
+                 <td class="info-label">Tipo de Reporte</td>
+                 <td class="info-value">Inspección Geoespacial</td>
+             </tr>
+             <tr>
+                 <td class="info-label">Versión</td>
+                 <td class="info-value">2.1</td>
+             </tr>
+         </table>
+     </div>
+    <div class="clearfix"></div>
+
+    <hr class="section-divider" />
+
+    <h2>Resumen Ejecutivo</h2>
+    
+         <div class="info-card">
+         <table style="width: 100%; border: none; border-collapse: separate; border-spacing: 12pt;">
+             <tr>
+                 <td style="width: 25%; border: none; padding: 6pt; vertical-align: middle;">
+                     <div class="metric-box metric-box-blue">
+                         <div style="display: block; width: 100%;">
+                             <div class="metric-value metric-value-blue">{{ concesiones|length }}</div>
+                             <div class="metric-label">Concesiones<br/>Intersectadas</div>
+                         </div>
+                     </div>
+                 </td>
+                 <td style="width: 25%; border: none; padding: 6pt; vertical-align: middle;">
+                     <div class="metric-box metric-box-green">
+                         <div style="display: block; width: 100%;">
+                             <div class="metric-value metric-value-green">{{ evidencias|length }}</div>
+                             <div class="metric-label">Puntos GPS<br/>Recolectados</div>
+                         </div>
+                     </div>
+                 </td>
+                 <td style="width: 25%; border: none; padding: 6pt; vertical-align: middle;">
+                     <div class="metric-box metric-box-orange">
+                         <div style="display: block; width: 100%;">
+                             <div class="metric-value metric-value-orange">{{ "%.0f"|format(analisis.distancia_buffer) }}m</div>
+                             <div class="metric-label">Distancia de<br/>Buffer</div>
+                         </div>
+                     </div>
+                 </td>
+                 <td style="width: 25%; border: none; padding: 6pt; vertical-align: middle;">
+                     <div class="metric-box metric-box-purple">
+                         <div style="display: block; width: 100%;">
+                             <div class="metric-value metric-value-purple">{{ titulares_unicos }}</div>
+                             <div class="metric-label">Titulares<br/>Afectados</div>
+                         </div>
+                     </div>
+                 </td>
+             </tr>
+         </table>
+        
+        {% if analisis.observaciones %}
+        <p style="font-style: italic; background-color: white; padding: 8pt; border-left: 3pt solid #4caf50; margin: 8pt 0;">
+            <strong>Observaciones:</strong> {{ analisis.observaciones }}
+        </p>
+        {% endif %}
+    </div>
+
+    <h2>Información de la Denuncia</h2>
+    
+    <div class="info-card">
+                 <table style="font-size: 10pt;">
+             <tr class="row-white">
+                 <td class="info-label">ID de Denuncia</td>
+                 <td class="info-value" style="font-family: 'Courier New', monospace; color: #1976d2; font-weight: bold;">#{{ denuncia.id_denuncia }}</td>
+             </tr>
+             <tr class="row-gray">
+                 <td class="info-label">Lugar de Inspección</td>
+                 <td class="info-value" style="font-weight: bold; color: #1976d2;">{{ denuncia.lugar }}</td>
+             </tr>
+             <tr class="row-white">
+                 <td class="info-label">Fecha de Inspección</td>
+                 <td class="info-value">{{ denuncia.fecha_inspeccion.strftime('%d de %B de %Y a las %H:%M hrs') }}</td>
+             </tr>
+             <tr class="row-gray">
+                 <td class="info-label">Fecha de Ingreso</td>
+                 <td class="info-value">{{ denuncia.fecha_ingreso.strftime('%d de %B de %Y a las %H:%M hrs') }}</td>
+             </tr>
+             {% if denuncia.observaciones %}
+             <tr class="row-white">
+                 <td class="info-label">Observaciones</td>
+                 <td class="info-value" style="font-style: italic;">{{ denuncia.observaciones }}</td>
+             </tr>
+             {% endif %}
+         </table>
+    </div>
+
+    {% if concesiones %}
+    <div class="page-break"></div>
+    <h2>Concesiones Intersectadas</h2>
+    
+         <table style="font-size: 8pt;">
+         <colgroup>
+             <col style="width: 12%;">
+             <col style="width: 25%;">
+             <col style="width: 23%;">
+             <col style="width: 15%;">
+             <col style="width: 15%;">
+             <col style="width: 10%;">
+         </colgroup>
+         <thead>
+             <tr>
+                 <th>Código Centro</th>
+                 <th>Nombre de la Concesión</th>
+                 <th>Titular</th>
+                 <th>Tipo</th>
+                 <th>Región</th>
+                 <th>Estado</th>
+             </tr>
+         </thead>
+         <tbody>
+             {% for concesion in concesiones %}
+             <tr{% if loop.index0 % 2 == 0 %} class="row-white"{% else %} class="row-gray"{% endif %}>
+                 <td style="font-family: 'Courier New', monospace; color: #1976d2; font-weight: bold;">{{ concesion.codigo_centro }}</td>
+                 <td style="font-weight: bold; text-align: left; padding-left: 4pt;">{{ concesion.nombre }}</td>
+                 <td style="text-align: left; padding-left: 4pt;">{{ concesion.titular }}</td>
+                 <td><span class="badge badge-info">{{ concesion.tipo }}</span></td>
+                 <td>{{ concesion.region }}</td>
+                 <td>
+                     <span class="badge badge-success">Válida</span>
+                 </td>
+             </tr>
+             {% endfor %}
+         </tbody>
+     </table>
+    {% endif %}
+
+    {% if evidencias %}
+    <h2>Evidencias GPS Recolectadas</h2>
+    
+         <p class="text-muted" style="font-style: italic; margin-bottom: 15pt; font-size: 12pt; padding: 8pt; background-color: #f8f9fa; border-left: 3pt solid #1976d2;">
+         📸 Puntos de evidencia georreferenciados durante la inspección de campo
+     </p>
+    
+         <div class="evidence-container">
+         <!-- Crear tabla para layout de 2 columnas -->
+         <table style="width: 100%; border: none; border-collapse: separate; border-spacing: 8pt;">
+             {% for i in range(0, evidencias|length, 2) %}
+             <tr style="border: none;">
+                                       <!-- Primera evidencia de la fila -->
+                 <td style="width: 50%; border: none; padding: 0; vertical-align: top;">
+                     {% set evidencia = evidencias[i] %}
+                     <div class="evidence-box">
+                         <!-- Header con título -->
+                         <div class="evidence-header">
+                             Evidencia #{{ evidencia.id_evidencia }}
+                         </div>
+                         
+                         <!-- Contenedor de foto -->
+                         <div class="evidence-photo-container">
+                             {% if evidencia.foto_url and evidencia.foto_url != '' %}
+                                 <img src="{{ evidencia.foto_url }}" alt="Evidencia #{{ evidencia.id_evidencia }}" class="evidence-photo" width="200" />
+                             {% else %}
+                                 <div class="evidence-no-photo">
+                                     📷<br/>No hay fotografía disponible
+                                 </div>
+                             {% endif %}
+                         </div>
+                         
+                         <!-- Detalles de la evidencia -->
+                         <div class="evidence-details">
+                             <div class="evidence-info-row">
+                                 <span class="evidence-info-label">Fecha:</span>
+                                 <span class="evidence-info-value">{{ evidencia.fecha }}</span>
+                             </div>
+                             <div class="evidence-info-row">
+                                 <span class="evidence-info-label">Hora:</span>
+                                 <span class="evidence-info-value">{{ evidencia.hora }}</span>
+                             </div>
+                             <div class="evidence-info-row">
+                                 <span class="evidence-info-label">Observaciones:</span>
+                                 <span class="evidence-info-value">{{ evidencia.descripcion or 'Sin observaciones' }}</span>
+                             </div>
+                             
+                             <!-- Coordenadas GPS -->
+                             {% if evidencia.coordenadas and evidencia.coordenadas.coordinates %}
+                             <div class="evidence-coords">
+                                 📍 LAT: {{ "%.6f"|format(evidencia.coordenadas.coordinates[1]) }}° | LON: {{ "%.6f"|format(evidencia.coordenadas.coordinates[0]) }}°
+                             </div>
+                             {% endif %}
+                         </div>
+                     </div>
+                 </td>
+                 
+                                   <!-- Segunda evidencia de la fila (si existe) -->
+                 <td style="width: 50%; border: none; padding: 0; vertical-align: top;">
+                     {% if i + 1 < evidencias|length %}
+                         {% set evidencia = evidencias[i + 1] %}
+                         <div class="evidence-box">
+                             <!-- Header con título -->
+                             <div class="evidence-header">
+                                 Evidencia #{{ evidencia.id_evidencia }}
+                             </div>
+                             
+                             <!-- Contenedor de foto -->
+                             <div class="evidence-photo-container">
+                                 {% if evidencia.foto_url and evidencia.foto_url != '' %}
+                                     <img src="{{ evidencia.foto_url }}" alt="Evidencia #{{ evidencia.id_evidencia }}" class="evidence-photo" width="200" />
+                                 {% else %}
+                                     <div class="evidence-no-photo">
+                                         📷<br/>No hay fotografía disponible
+                                     </div>
+                                 {% endif %}
+                             </div>
+                             
+                             <!-- Detalles de la evidencia -->
+                             <div class="evidence-details">
+                                 <div class="evidence-info-row">
+                                     <span class="evidence-info-label">Fecha:</span>
+                                     <span class="evidence-info-value">{{ evidencia.fecha }}</span>
+                                 </div>
+                                 <div class="evidence-info-row">
+                                     <span class="evidence-info-label">Hora:</span>
+                                     <span class="evidence-info-value">{{ evidencia.hora }}</span>
+                                 </div>
+                                 <div class="evidence-info-row">
+                                     <span class="evidence-info-label">Observaciones:</span>
+                                     <span class="evidence-info-value">{{ evidencia.descripcion or 'Sin observaciones' }}</span>
+                                 </div>
+                                 
+                                 <!-- Coordenadas GPS -->
+                                 {% if evidencia.coordenadas and evidencia.coordenadas.coordinates %}
+                                 <div class="evidence-coords">
+                                     📍 LAT: {{ "%.6f"|format(evidencia.coordenadas.coordinates[1]) }}° | LON: {{ "%.6f"|format(evidencia.coordenadas.coordinates[0]) }}°
+                                 </div>
+                                 {% endif %}
+                             </div>
+                         </div>
+                     {% endif %}
+                 </td>
+             </tr>
+             {% endfor %}
+         </table>
+         </div>
+    {% endif %}
+
+    <!-- Mapa de Resultados del Análisis -->
+    {% if mapa_resultados_path %}
+    <div style="page-break-before: auto; margin-top: 20pt;">
+        <h2 style="color: #1976d2; border-bottom: 2pt solid #1976d2; padding-bottom: 6pt; margin-bottom: 16pt;">
+            🗺️ Mapa de Resultados del Análisis
+        </h2>
+        
+        <div class="info-card" style="text-align: center; padding: 16pt;">
+            <p style="font-size: 11pt; color: #666; margin-bottom: 12pt;">
+                Visualización geoespacial del buffer, concesiones intersectadas y evidencias GPS
+            </p>
+            
+            <div style="border: 1pt solid #ddd; display: inline-block; padding: 8pt; background-color: #f9f9f9;">
+                <img src="{{ mapa_resultados_path }}" alt="Mapa de Resultados del Análisis" 
+                     style="max-width: 100%; height: auto; display: block;" width="600" />
+            </div>
+            
+            <!-- Leyenda del mapa -->
+            <div style="margin-top: 12pt;">
+                <h3 style="font-size: 11pt; color: #1976d2; margin-bottom: 10pt; text-align: center; border-bottom: 1pt solid #e0e0e0; padding-bottom: 4pt;">Leyenda</h3>
+                
+                <table style="width: 100%; border: none; font-size: 10pt; background-color: #f8f9fa; padding: 8pt;">
+                    <tr style="border: none;">
+                        <td style="border: none; text-align: center; padding: 8pt; width: 33%;">
+                            <span style="font-size: 16pt; color: #0066ff; font-weight: bold;">■</span>
+                            <br/>
+                            <span style="font-weight: bold; color: #333; font-size: 10pt;">Área de Buffer</span>
+                            <br/>
+                            <span style="font-size: 9pt; color: #666;">({{ "%.0f"|format(analisis.distancia_buffer) }}m)</span>
+                        </td>
+                        <td style="border: none; text-align: center; padding: 8pt; width: 33%;">
+                            <span style="font-size: 16pt; color: #ff0000; font-weight: bold;">■</span>
+                            <br/>
+                            <span style="font-weight: bold; color: #333; font-size: 10pt;">Concesiones Intersectadas</span>
+                            <br/>
+                            <span style="font-size: 9pt; color: #666;">({{ resultados|selectattr('interseccion_valida', 'equalto', true)|list|length }} encontradas)</span>
+                        </td>
+                        <td style="border: none; text-align: center; padding: 8pt; width: 33%;">
+                            <span style="font-size: 14pt; color: #0066ff; font-weight: bold;">●</span>
+                            <br/>
+                            <span style="font-weight: bold; color: #333; font-size: 10pt;">Puntos GPS</span>
+                            <br/>
+                            <span style="font-size: 9pt; color: #666;">({{ evidencias|length }} evidencias)</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <h2>Parámetros Técnicos del Análisis</h2>
+    
+         <div class="info-card">
+         <table style="font-size: 10pt;">
+             <tr class="row-white">
+                 <td class="info-label">ID de Análisis</td>
+                 <td class="info-value" style="font-family: 'Courier New', monospace; color: #1976d2; font-weight: bold;">#{{ analisis.id_analisis }}</td>
+             </tr>
+             <tr class="row-gray">
+                 <td class="info-label">ID de Denuncia Asociada</td>
+                 <td class="info-value" style="font-family: 'Courier New', monospace;">#{{ analisis.id_denuncia }}</td>
+             </tr>
+             <tr class="row-white">
+                 <td class="info-label">Método de Análisis</td>
+                 <td class="info-value">{{ analisis.metodo or 'Buffer de intersección geoespacial' }}</td>
+             </tr>
+             <tr class="row-gray">
+                 <td class="info-label">Distancia de Buffer Aplicada</td>
+                 <td class="info-value" style="font-weight: bold;">{{ "%.1f"|format(analisis.distancia_buffer) }} metros</td>
+             </tr>
+             <tr class="row-white">
+                 <td class="info-label">Fecha y Hora del Análisis</td>
+                 <td class="info-value">{{ analisis.fecha_analisis.strftime('%d de %B de %Y a las %H:%M:%S hrs') }}</td>
+             </tr>
+         </table>
+     </div>
+
+    
+
+    <hr class="section-divider" />
+
+    <div class="text-center">
+        <div class="info-card">
+            <h2 style="color: #1976d2; margin-bottom: 6pt;">Sistema de Monitoreo Costero - Playas Limpias</h2>
+                         <p class="text-muted" style="font-size: 11pt;">
+                 <strong>Reporte generado automáticamente</strong><br/>
+                 {{ fecha_generacion.strftime('%d de %B de %Y a las %H:%M:%S hrs') }}<br/>
+                 Para consultas técnicas o aclaraciones, contacte al administrador del sistema.
+             </p>
+        </div>
+    </div>
+</body>
+</html> 

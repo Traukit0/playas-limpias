@@ -343,9 +343,7 @@ export default function DenunciaDetallePage({ params }: { params: Promise<{ id: 
                   {new Date(denuncia.fecha_inspeccion).toLocaleDateString('es-ES', {
                     year: 'numeric',
                     month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                    day: 'numeric'
                   })}
                 </span>
               </div>
@@ -359,9 +357,7 @@ export default function DenunciaDetallePage({ params }: { params: Promise<{ id: 
                   {new Date(denuncia.fecha_ingreso).toLocaleDateString('es-ES', {
                     year: 'numeric',
                     month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                    day: 'numeric'
                   })}
                 </span>
               </div>

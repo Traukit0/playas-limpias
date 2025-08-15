@@ -13,6 +13,9 @@ RUN npm install -g pnpm
 # Instala las dependencias del proyecto
 RUN pnpm install
 
+# Establece la zona horaria
+ENV TZ=America/Santiago
+
 # Copia el resto del código fuente
 COPY . .
 

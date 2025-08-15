@@ -235,7 +235,11 @@ export default function MisDenunciasPage() {
                   <div>
                     <span className="font-medium">Fecha de Inspección:</span>
                     <span className="ml-2 text-muted-foreground">
-                      {new Date(denuncia.fecha_inspeccion).toLocaleDateString('es-ES')}
+                      {new Date(denuncia.fecha_inspeccion).toLocaleDateString('es-ES', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
                     </span>
                   </div>
                   

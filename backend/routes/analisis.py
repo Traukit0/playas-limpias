@@ -15,7 +15,7 @@ from services.geoprocessing.buffer import generar_buffer_union
 from services.geoprocessing.interseccion import intersectar_concesiones
 from services.map_generator import MapGenerator
 from services.kmz_generator import KMZGenerator
-from datetime import datetime
+from datetime import datetime, timezone
 import time
 from logging_utils import log_event
 from typing import List
@@ -46,7 +46,7 @@ def ejecutar_analisis(data: AnalisisCreate, db: Session = Depends(get_db)):
     # Crear registro de análisis
     nuevo_analisis = AnalisisDenuncia(
         id_denuncia=data.id_denuncia,
-        fecha_analisis=datetime.utcnow(),
+        fecha_analisis=datetime.now(timezone.utc),
         distancia_buffer=data.distancia_buffer,
         metodo=data.metodo,
         observaciones=data.observaciones
