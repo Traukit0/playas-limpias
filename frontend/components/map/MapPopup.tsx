@@ -1,7 +1,8 @@
 "use client"
 
 import React from 'react'
-import { X, Calendar, MapPin, User, FileText, Camera, Fish, Shell, Leaf, BarChart3 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { X, Calendar, MapPin, User, FileText, Camera, Fish, Shell, Leaf, BarChart3, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
@@ -17,11 +18,19 @@ interface MapPopupProps {
 }
 
 export function MapPopup({ popupInfo, onClose }: MapPopupProps) {
+  const router = useRouter()
+  
   if (!popupInfo) return null
 
   const { feature } = popupInfo
   const properties = feature.properties || {}
   const sourceId = feature.source
+
+  const handleViewDenuncia = () => {
+    if (properties.id_denuncia) {
+      router.push(`/denuncia/${properties.id_denuncia}`)
+    }
+  }
 
   const renderEvidenciaContent = () => (
     <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 space-y-3">
@@ -231,6 +240,19 @@ export function MapPopup({ popupInfo, onClose }: MapPopupProps) {
             <p className="text-sm text-gray-700 pl-6">
               {properties.observaciones_denuncia}
             </p>
+          </div>
+        )}
+        
+        {properties.id_denuncia && (
+          <div className="pt-2">
+            <Button 
+              onClick={handleViewDenuncia}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm"
+              size="sm"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Ver Denuncia #{properties.id_denuncia}
+            </Button>
           </div>
         )}
       </div>
