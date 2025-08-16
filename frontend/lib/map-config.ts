@@ -16,13 +16,6 @@ export const MAP_CONFIG = {
   
   // Configuración de capas
   layers: {
-    denuncias: {
-      color: '#FF6B6B',
-      clusterColor: '#FF5252',
-      clusterTextColor: '#FFFFFF',
-      hoverColor: '#FF4444',
-      selectedColor: '#FF0000'
-    },
     evidencias: {
       color: '#4ECDC4',
       clusterColor: '#26A69A',

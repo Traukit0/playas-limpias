@@ -5,7 +5,7 @@ interface Layer {
   id: string
   name: string
   visible: boolean
-  type: 'denuncias' | 'evidencias' | 'concesiones' | 'analisis'
+  type: 'evidencias' | 'concesiones' | 'analisis'
   color: string
   icon: string
   count?: number
@@ -13,15 +13,6 @@ interface Layer {
 
 export function useMapLayers(map: maplibregl.Map | null) {
   const [layers, setLayers] = useState<Layer[]>([
-    {
-      id: 'denuncias',
-      name: 'Denuncias',
-      visible: true,
-      type: 'denuncias',
-      color: '#FF6B6B',
-      icon: '🚨',
-      count: 0
-    },
     {
       id: 'evidencias',
       name: 'Evidencias',
@@ -51,7 +42,7 @@ export function useMapLayers(map: maplibregl.Map | null) {
     }
   ])
 
-  const [visibleLayers, setVisibleLayers] = useState<Set<string>>(new Set(['denuncias', 'evidencias', 'concesiones']))
+  const [visibleLayers, setVisibleLayers] = useState<Set<string>>(new Set(['evidencias', 'concesiones']))
 
   // Actualizar visibilidad de capas en el mapa
   const updateLayerVisibility = useCallback((layerId: string, visible: boolean) => {
@@ -69,14 +60,12 @@ export function useMapLayers(map: maplibregl.Map | null) {
   // Obtener IDs de capas relacionadas
   const getLayerIds = useCallback((layerId: string): string[] => {
     switch (layerId) {
-      case 'denuncias':
-        return ['denuncias-clusters', 'denuncias-cluster-count', 'denuncias-unclustered-point']
       case 'evidencias':
         return ['evidencias-layer']
       case 'concesiones':
         return ['concesiones-fill', 'concesiones-border']
       case 'analisis':
-        return ['analisis-layer']
+        return ['analisis-layer', 'analisis-border']
       default:
         return [layerId]
     }

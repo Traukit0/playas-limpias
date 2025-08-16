@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 interface Layer {
   id: string
   name: string
-  type: 'denuncias' | 'evidencias' | 'concesiones' | 'analisis'
+  type: 'evidencias' | 'concesiones' | 'analisis'
   color: string
   icon: string
   description?: string
@@ -25,8 +25,6 @@ export function Legend({ layers }: LegendProps) {
 
   const getLayerIcon = (type: string) => {
     switch (type) {
-      case 'denuncias':
-        return '🚨'
       case 'evidencias':
         return '📍'
       case 'concesiones':
@@ -40,8 +38,6 @@ export function Legend({ layers }: LegendProps) {
 
   const getLayerDescription = (type: string) => {
     switch (type) {
-      case 'denuncias':
-        return 'Puntos de denuncias ambientales registradas'
       case 'evidencias':
         return 'Evidencias fotográficas con coordenadas GPS'
       case 'concesiones':
@@ -55,8 +51,6 @@ export function Legend({ layers }: LegendProps) {
 
   const getLayerColor = (type: string) => {
     switch (type) {
-      case 'denuncias':
-        return '#FF6B6B'
       case 'evidencias':
         return '#4ECDC4'
       case 'concesiones':
@@ -70,7 +64,6 @@ export function Legend({ layers }: LegendProps) {
 
   const getLayerStyle = (type: string) => {
     switch (type) {
-      case 'denuncias':
       case 'evidencias':
         return 'circle'
       case 'concesiones':
@@ -83,7 +76,7 @@ export function Legend({ layers }: LegendProps) {
   }
 
   return (
-    <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-4 z-10 max-w-xs">
+    <div className="absolute bottom-20 left-4 bg-white rounded-lg shadow-lg p-4 z-10 max-w-xs">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className="w-full justify-between p-0 h-auto">

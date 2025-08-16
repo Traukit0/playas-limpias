@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { API_URL } from '@/lib/api-config'
+import { useAuth } from './use-auth'
 
 interface MapBounds {
   bounds: [number, number, number, number] // [west, south, east, north]
@@ -7,7 +8,6 @@ interface MapBounds {
 }
 
 interface MapData {
-  denuncias?: any
   evidencias?: any
   concesiones?: any
   analisis?: any
@@ -19,7 +19,8 @@ interface MapDataState {
   error: string | null
 }
 
-export function useMapData() {
+export function useMapData(onLayerCountUpdate?: (layerId: string, count: number) => void) {
+  const { token } = useAuth()
   const [state, setState] = useState<MapDataState>({
     mapData: {},
     loading: false,
@@ -33,26 +34,35 @@ export function useMapData() {
       const { bounds, zoom } = params
       const boundsStr = bounds.join(',')
       
+      // Verificar token de autenticación
+      console.log('Token de autenticación:', token ? 'Presente' : 'Ausente')
+      console.log('Cargando datos para bounds:', boundsStr, 'zoom:', zoom)
+      
+      if (!token) {
+        console.error('No hay token de autenticación')
+        setState(prev => ({
+          ...prev,
+          loading: false,
+          error: 'No hay token de autenticación'
+        }))
+        return
+      }
+      
       // Cargar datos en paralelo
-      const [denunciasRes, evidenciasRes, concesionesRes, analisisRes] = await Promise.allSettled([
-        fetch(`${API_URL}/map/denuncias?bounds=${boundsStr}&zoom=${zoom}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-          }
-        }),
+      const [evidenciasRes, concesionesRes, analisisRes] = await Promise.allSettled([
         fetch(`${API_URL}/map/evidencias?bounds=${boundsStr}&zoom=${zoom}`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            'Authorization': `Bearer ${token}`
           }
         }),
         fetch(`${API_URL}/map/concesiones?bounds=${boundsStr}&zoom=${zoom}`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            'Authorization': `Bearer ${token}`
           }
         }),
         fetch(`${API_URL}/map/analisis?bounds=${boundsStr}&zoom=${zoom}`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            'Authorization': `Bearer ${token}`
           }
         })
       ])
@@ -60,20 +70,37 @@ export function useMapData() {
       const newMapData: MapData = {}
 
       // Procesar respuestas
-      if (denunciasRes.status === 'fulfilled' && denunciasRes.value.ok) {
-        newMapData.denuncias = await denunciasRes.value.json()
-      }
-
       if (evidenciasRes.status === 'fulfilled' && evidenciasRes.value.ok) {
-        newMapData.evidencias = await evidenciasRes.value.json()
+        const evidenciasData = await evidenciasRes.value.json()
+        newMapData.evidencias = evidenciasData
+        const evidenciasCount = evidenciasData.features?.length || 0
+        console.log('Evidencias cargadas:', evidenciasCount, 'features')
+        onLayerCountUpdate?.('evidencias', evidenciasCount)
+      } else {
+        console.error('Error cargando evidencias:', evidenciasRes)
+        onLayerCountUpdate?.('evidencias', 0)
       }
 
       if (concesionesRes.status === 'fulfilled' && concesionesRes.value.ok) {
-        newMapData.concesiones = await concesionesRes.value.json()
+        const concesionesData = await concesionesRes.value.json()
+        newMapData.concesiones = concesionesData
+        const concesionesCount = concesionesData.features?.length || 0
+        console.log('Concesiones cargadas:', concesionesCount, 'features')
+        onLayerCountUpdate?.('concesiones', concesionesCount)
+      } else {
+        console.error('Error cargando concesiones:', concesionesRes)
+        onLayerCountUpdate?.('concesiones', 0)
       }
 
       if (analisisRes.status === 'fulfilled' && analisisRes.value.ok) {
-        newMapData.analisis = await analisisRes.value.json()
+        const analisisData = await analisisRes.value.json()
+        newMapData.analisis = analisisData
+        const analisisCount = analisisData.features?.length || 0
+        console.log('Análisis cargados:', analisisCount, 'features')
+        onLayerCountUpdate?.('analisis', analisisCount)
+      } else {
+        console.error('Error cargando análisis:', analisisRes)
+        onLayerCountUpdate?.('analisis', 0)
       }
 
       setState({
@@ -90,7 +117,7 @@ export function useMapData() {
         error: 'Error al cargar los datos del mapa'
       }))
     }
-  }, [])
+  }, [token])
 
   const refreshMapData = useCallback((params: MapBounds) => {
     loadMapData(params)

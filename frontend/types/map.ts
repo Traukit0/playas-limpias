@@ -22,7 +22,7 @@ export interface Layer {
   id: string
   name: string
   visible: boolean
-  type: 'denuncias' | 'evidencias' | 'concesiones' | 'analisis'
+  type: 'evidencias' | 'concesiones' | 'analisis'
   color: string
   icon: string
   count?: number

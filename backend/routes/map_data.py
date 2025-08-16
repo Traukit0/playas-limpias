@@ -23,7 +23,7 @@ def get_db():
     finally:
         db.close()
 
-@router.get("/map/denuncias", dependencies=[Depends(verificar_token)])
+@router.get("/denuncias", dependencies=[Depends(verificar_token)])
 def obtener_denuncias_mapa(
     bounds: Optional[str] = Query(None, description="Bounds del mapa: lat1,lng1,lat2,lng2"),
     zoom: Optional[int] = Query(None, description="Nivel de zoom actual"),
@@ -37,7 +37,7 @@ def obtener_denuncias_mapa(
     try:
         # Si no hay bounds, retornar todas las denuncias
         if not bounds:
-            # Consulta básica sin filtros espaciales
+            # Consulta básica sin filtros espaciales - simplificada
             query = text("""
                 SELECT 
                     d.id_denuncia,
@@ -45,61 +45,51 @@ def obtener_denuncias_mapa(
                     d.fecha_inspeccion,
                     d.fecha_ingreso,
                     d.observaciones,
-                    ST_AsGeoJSON(ST_Centroid(ST_Collect(e.coordenadas))) as geometry,
-                    COUNT(e.id_evidencia) as total_evidencias
+                    ST_AsGeoJSON(e.coordenadas) as geometry,
+                    1 as total_evidencias
                 FROM denuncias d
                 LEFT JOIN evidencias e ON d.id_denuncia = e.id_denuncia
-                GROUP BY d.id_denuncia, d.lugar, d.fecha_inspeccion, d.fecha_ingreso, d.observaciones
+                WHERE e.coordenadas IS NOT NULL
+                LIMIT 100
             """)
+            logger.info(f"Ejecutando consulta sin bounds: {query}")
             result = db.execute(query).fetchall()
+            logger.info(f"Resultados obtenidos: {len(result)} filas")
         else:
-            # Parsear bounds
+            # Parsear bounds - formato: west,south,east,north
             try:
-                lat1, lng1, lat2, lng2 = map(float, bounds.split(','))
+                lng1, lat1, lng2, lat2 = map(float, bounds.split(','))
             except ValueError:
                 raise HTTPException(status_code=400, detail="Formato de bounds inválido")
             
-            # Aplicar clustering según el zoom
-            if zoom and zoom < 12:
-                # Clustering para zoom bajo
-                query = text("""
-                    SELECT 
-                        ST_SnapToGrid(ST_Centroid(ST_Collect(e.coordenadas)), 0.01) as grid_center,
-                        COUNT(DISTINCT d.id_denuncia) as count,
-                        MIN(d.fecha_ingreso) as fecha_inicio,
-                        MAX(d.fecha_ingreso) as fecha_fin,
-                        STRING_AGG(DISTINCT d.lugar, ', ') as lugares,
-                        ST_AsGeoJSON(ST_Centroid(ST_Collect(e.coordenadas))) as geometry
-                    FROM denuncias d
-                    LEFT JOIN evidencias e ON d.id_denuncia = e.id_denuncia
-                    WHERE ST_Intersects(e.coordenadas, ST_MakeEnvelope(:lng1, :lat1, :lng2, :lat2, 4326))
-                    GROUP BY ST_SnapToGrid(ST_Centroid(ST_Collect(e.coordenadas)), 0.01)
-                """)
-            else:
-                # Sin clustering para zoom alto
-                query = text("""
-                    SELECT 
-                        d.id_denuncia,
-                        d.lugar,
-                        d.fecha_inspeccion,
-                        d.fecha_ingreso,
-                        d.observaciones,
-                        ST_AsGeoJSON(ST_Centroid(ST_Collect(e.coordenadas))) as geometry,
-                        COUNT(e.id_evidencia) as total_evidencias
-                    FROM denuncias d
-                    LEFT JOIN evidencias e ON d.id_denuncia = e.id_denuncia
-                    WHERE ST_Intersects(e.coordenadas, ST_MakeEnvelope(:lng1, :lat1, :lng2, :lat2, 4326))
-                    GROUP BY d.id_denuncia, d.lugar, d.fecha_inspeccion, d.fecha_ingreso, d.observaciones
-                """)
+            # Consulta simplificada sin clustering por ahora
+            query = text("""
+                SELECT 
+                    d.id_denuncia,
+                    d.lugar,
+                    d.fecha_inspeccion,
+                    d.fecha_ingreso,
+                    d.observaciones,
+                    ST_AsGeoJSON(e.coordenadas) as geometry,
+                    1 as total_evidencias
+                FROM denuncias d
+                LEFT JOIN evidencias e ON d.id_denuncia = e.id_denuncia
+                WHERE ST_Intersects(e.coordenadas, ST_MakeEnvelope(:lng1, :lat1, :lng2, :lat2, 4326))
+                AND e.coordenadas IS NOT NULL
+                LIMIT 100
+            """)
             
+            logger.info(f"Ejecutando consulta con bounds: {bounds}, lat1={lat1}, lng1={lng1}, lat2={lat2}, lng2={lng2}")
             result = db.execute(query, {
-                "lat1": lat1, "lng1": lng1, 
-                "lat2": lat2, "lng2": lng2
+                "lng1": lng1, "lat1": lat1, 
+                "lng2": lng2, "lat2": lat2
             }).fetchall()
+            logger.info(f"Resultados obtenidos: {len(result)} filas")
         
         # Convertir a GeoJSON
         features = []
-        for row in result:
+        logger.info(f"Procesando {len(result)} filas de resultados")
+        for i, row in enumerate(result):
             try:
                 geometry = json.loads(row.geometry) if row.geometry else None
                 if geometry:
@@ -122,8 +112,10 @@ def obtener_denuncias_mapa(
                         }
                     }
                     features.append(feature)
+                    if i < 3:  # Log solo los primeros 3 para debug
+                        logger.info(f"Feature {i+1}: {feature['properties']['title']} en {geometry['coordinates']}")
             except Exception as e:
-                logger.warning(f"Error procesando denuncia: {e}")
+                logger.warning(f"Error procesando denuncia {i}: {e}")
                 continue
         
         geojson = {
@@ -141,7 +133,7 @@ def obtener_denuncias_mapa(
         logger.error(f"Error cargando denuncias para mapa: {e}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
-@router.get("/map/evidencias", dependencies=[Depends(verificar_token)])
+@router.get("/evidencias", dependencies=[Depends(verificar_token)])
 def obtener_evidencias_mapa(
     bounds: Optional[str] = Query(None, description="Bounds del mapa: lat1,lng1,lat2,lng2"),
     id_denuncia: Optional[int] = Query(None, description="ID de denuncia específica"),
@@ -170,9 +162,9 @@ def obtener_evidencias_mapa(
             """)
             result = db.execute(query, {"id_denuncia": id_denuncia}).fetchall()
         elif bounds:
-            # Evidencias dentro de bounds
+            # Evidencias dentro de bounds - formato: west,south,east,north
             try:
-                lat1, lng1, lat2, lng2 = map(float, bounds.split(','))
+                lng1, lat1, lng2, lat2 = map(float, bounds.split(','))
             except ValueError:
                 raise HTTPException(status_code=400, detail="Formato de bounds inválido")
             
@@ -190,8 +182,8 @@ def obtener_evidencias_mapa(
                 ORDER BY e.fecha, e.hora
             """)
             result = db.execute(query, {
-                "lat1": lat1, "lng1": lng1, 
-                "lat2": lat2, "lng2": lng2
+                "lng1": lng1, "lat1": lat1, 
+                "lng2": lng2, "lat2": lat2
             }).fetchall()
         else:
             # Todas las evidencias (limitado para performance)
@@ -250,7 +242,7 @@ def obtener_evidencias_mapa(
         logger.error(f"Error cargando evidencias para mapa: {e}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
-@router.get("/map/concesiones", dependencies=[Depends(verificar_token)])
+@router.get("/concesiones", dependencies=[Depends(verificar_token)])
 def obtener_concesiones_mapa(
     bounds: Optional[str] = Query(None, description="Bounds del mapa: lat1,lng1,lat2,lng2"),
     region: Optional[str] = Query(None, description="Filtrar por región"),
@@ -264,7 +256,7 @@ def obtener_concesiones_mapa(
     try:
         if bounds:
             try:
-                lat1, lng1, lat2, lng2 = map(float, bounds.split(','))
+                lng1, lat1, lng2, lat2 = map(float, bounds.split(','))
             except ValueError:
                 raise HTTPException(status_code=400, detail="Formato de bounds inválido")
             
@@ -283,8 +275,8 @@ def obtener_concesiones_mapa(
                     AND c.region = :region
                 """)
                 result = db.execute(query, {
-                    "lat1": lat1, "lng1": lng1, 
-                    "lat2": lat2, "lng2": lng2,
+                    "lng1": lng1, "lat1": lat1, 
+                    "lng2": lng2, "lat2": lat2,
                     "region": region
                 }).fetchall()
             else:
@@ -301,8 +293,8 @@ def obtener_concesiones_mapa(
                     WHERE ST_Intersects(c.geom, ST_MakeEnvelope(:lng1, :lat1, :lng2, :lat2, 4326))
                 """)
                 result = db.execute(query, {
-                    "lat1": lat1, "lng1": lng1, 
-                    "lat2": lat2, "lng2": lng2
+                    "lng1": lng1, "lat1": lat1, 
+                    "lng2": lng2, "lat2": lat2
                 }).fetchall()
         else:
             # Todas las concesiones
@@ -374,7 +366,7 @@ def obtener_concesiones_mapa(
         logger.error(f"Error cargando concesiones para mapa: {e}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
-@router.get("/map/analisis", dependencies=[Depends(verificar_token)])
+@router.get("/analisis", dependencies=[Depends(verificar_token)])
 def obtener_analisis_mapa(
     bounds: Optional[str] = Query(None, description="Bounds del mapa: lat1,lng1,lat2,lng2"),
     db: Session = Depends(get_db)
@@ -387,7 +379,7 @@ def obtener_analisis_mapa(
     try:
         if bounds:
             try:
-                lat1, lng1, lat2, lng2 = map(float, bounds.split(','))
+                lng1, lat1, lng2, lat2 = map(float, bounds.split(','))
             except ValueError:
                 raise HTTPException(status_code=400, detail="Formato de bounds inválido")
             
@@ -407,8 +399,8 @@ def obtener_analisis_mapa(
                 GROUP BY a.id_analisis, a.id_denuncia, a.fecha_analisis, a.distancia_buffer, a.metodo, a.observaciones, a.buffer_geom
             """)
             result = db.execute(query, {
-                "lat1": lat1, "lng1": lng1, 
-                "lat2": lat2, "lng2": lng2
+                "lng1": lng1, "lat1": lat1, 
+                "lng2": lng2, "lat2": lat2
             }).fetchall()
         else:
             # Todos los análisis
@@ -469,7 +461,7 @@ def obtener_analisis_mapa(
         logger.error(f"Error cargando análisis para mapa: {e}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
-@router.get("/map/estadisticas", dependencies=[Depends(verificar_token)])
+@router.get("/estadisticas", dependencies=[Depends(verificar_token)])
 def obtener_estadisticas_mapa(
     bounds: Optional[str] = Query(None, description="Bounds del mapa: lat1,lng1,lat2,lng2"),
     db: Session = Depends(get_db)
@@ -482,7 +474,7 @@ def obtener_estadisticas_mapa(
     try:
         if bounds:
             try:
-                lat1, lng1, lat2, lng2 = map(float, bounds.split(','))
+                lng1, lat1, lng2, lat2 = map(float, bounds.split(','))
             except ValueError:
                 raise HTTPException(status_code=400, detail="Formato de bounds inválido")
             
@@ -503,8 +495,8 @@ def obtener_estadisticas_mapa(
             """)
             
             result = db.execute(stats_query, {
-                "lat1": lat1, "lng1": lng1, 
-                "lat2": lat2, "lng2": lng2
+                "lng1": lng1, "lat1": lat1, 
+                "lng2": lng2, "lat2": lat2
             }).fetchone()
         else:
             # Estadísticas globales

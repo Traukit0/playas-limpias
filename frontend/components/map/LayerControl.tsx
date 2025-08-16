@@ -10,7 +10,7 @@ interface Layer {
   id: string
   name: string
   visible: boolean
-  type: 'denuncias' | 'evidencias' | 'concesiones' | 'analisis'
+  type: 'evidencias' | 'concesiones' | 'analisis'
   color: string
   icon: string
   count?: number
@@ -27,8 +27,6 @@ export function LayerControl({ layers, visibleLayers, onLayerToggle }: LayerCont
 
   const getLayerIcon = (type: string) => {
     switch (type) {
-      case 'denuncias':
-        return '🚨'
       case 'evidencias':
         return '📍'
       case 'concesiones':
@@ -42,8 +40,6 @@ export function LayerControl({ layers, visibleLayers, onLayerToggle }: LayerCont
 
   const getLayerColor = (type: string) => {
     switch (type) {
-      case 'denuncias':
-        return '#FF6B6B'
       case 'evidencias':
         return '#4ECDC4'
       case 'concesiones':

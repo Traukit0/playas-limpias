@@ -2,9 +2,6 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react'
 import Map, { 
-  NavigationControl, 
-  GeolocateControl, 
-  FullscreenControl,
   Source,
   Layer,
   Popup
@@ -32,20 +29,20 @@ interface MapViewerProps {
 
 export function MapViewer({ 
   initialViewState = {
-    longitude: -73.5, // Chiloé, Chile
-    latitude: -42.5,
-    zoom: 8
+    longitude: -73.447, // Centro exacto de los datos
+    latitude: -42.52,
+    zoom: 15
   }, 
   onMapLoad 
 }: MapViewerProps) {
-  const mapRef = useRef<maplibregl.Map>(null)
+  const mapRef = useRef<any>(null)
   const [viewState, setViewState] = useState(initialViewState)
   const [popupInfo, setPopupInfo] = useState<any>(null)
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null)
 
   // Hooks personalizados
-  const { layers, visibleLayers, addLayer, toggleLayer } = useMapLayers(mapRef.current)
-  const { loadMapData, mapData, loading } = useMapData()
+  const { layers, visibleLayers, addLayer, toggleLayer, updateLayerCount } = useMapLayers(mapRef.current)
+  const { loadMapData, mapData, loading } = useMapData(updateLayerCount)
   const { 
     activeTool,
     measurements,
@@ -81,6 +78,7 @@ export function MapViewer({
   // Manejar carga del mapa
   const handleMapLoad = useCallback((event: any) => {
     const map = event.target
+    mapRef.current = map
     if (onMapLoad) {
       onMapLoad(map)
     }
@@ -88,16 +86,15 @@ export function MapViewer({
     // Configurar estilos y fuentes
     map.setStyle(MAP_CONFIG.styles.streets)
     
-    // Agregar controles personalizados
-    map.addControl(new NavigationControl(), 'top-right')
-    map.addControl(new GeolocateControl({
+    // Agregar controles personalizados usando MapLibre directamente
+    map.addControl(new maplibregl.NavigationControl(), 'top-right')
+    map.addControl(new maplibregl.GeolocateControl({
       positionOptions: {
         enableHighAccuracy: true
       },
-      trackUserLocation: true,
-      showUserHeading: true
+      trackUserLocation: true
     }), 'top-right')
-    map.addControl(new FullscreenControl(), 'top-right')
+    map.addControl(new maplibregl.FullscreenControl(), 'top-right')
   }, [onMapLoad])
 
   // Manejar click en el mapa
@@ -154,63 +151,12 @@ export function MapViewer({
         onLoad={handleMapLoad}
         onClick={handleMapClick}
         onMouseMove={handleMapMouseMove}
-        mapLib={maplibregl}
+
         mapStyle={MAP_CONFIG.styles.streets}
         style={{ width: '100%', height: '100%' }}
         interactiveLayerIds={layers.map(layer => layer.id)}
       >
         {/* Fuentes de datos dinámicas */}
-        {mapData.denuncias && (
-          <Source
-            id="denuncias-source"
-            type="geojson"
-            data={mapData.denuncias}
-            cluster={true}
-            clusterRadius={MAP_CONFIG.clustering.radius}
-            clusterMaxZoom={MAP_CONFIG.clustering.maxZoom}
-            clusterMinPoints={MAP_CONFIG.clustering.minPoints}
-          >
-            <Layer
-              id="denuncias-clusters"
-              type="circle"
-              filter={['has', 'point_count']}
-              paint={{
-                'circle-color': MAP_CONFIG.layers.denuncias.clusterColor,
-                'circle-radius': [
-                  'step',
-                  ['get', 'point_count'],
-                  20, 100,
-                  30, 750,
-                  40
-                ]
-              }}
-            />
-            <Layer
-              id="denuncias-cluster-count"
-              type="symbol"
-              filter={['has', 'point_count']}
-              layout={{
-                'text-field': '{point_count_abbreviated}',
-                'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-                'text-size': 12
-              }}
-              paint={{
-                'text-color': MAP_CONFIG.layers.denuncias.clusterTextColor
-              }}
-            />
-            <Layer
-              id="denuncias-unclustered-point"
-              type="circle"
-              filter={['!', ['has', 'point_count']]}
-              paint={{
-                'circle-color': MAP_CONFIG.layers.denuncias.color,
-                'circle-radius': 8,
-                'circle-stroke-width': 2,
-                'circle-stroke-color': '#fff'
-              }}
-            />
-          </Source>
-        )}
 
         {mapData.evidencias && (
           <Source
@@ -251,6 +197,31 @@ export function MapViewer({
               paint={{
                 'line-color': MAP_CONFIG.layers.concesiones.borderColor,
                 'line-width': 2
+              }}
+            />
+          </Source>
+        )}
+
+        {mapData.analisis && (
+          <Source
+            id="analisis-source"
+            type="geojson"
+            data={mapData.analisis}
+          >
+            <Layer
+              id="analisis-layer"
+              type="fill"
+              paint={{
+                'fill-color': MAP_CONFIG.layers.analisis.color,
+                'fill-opacity': MAP_CONFIG.layers.analisis.fillOpacity
+              }}
+            />
+            <Layer
+              id="analisis-border"
+              type="line"
+              paint={{
+                'line-color': MAP_CONFIG.layers.analisis.borderColor,
+                'line-width': 1
               }}
             />
           </Source>
@@ -301,8 +272,8 @@ export function MapViewer({
         isDrawing={isDrawing}
       />
       <Search 
-        onSearch={(term) => console.log('Buscar:', term)}
-        onFilter={(filters) => console.log('Filtrar:', filters)}
+        onSearch={(term: string) => console.log('Buscar:', term)}
+        onFilter={(filters: any) => console.log('Filtrar:', filters)}
         onLocationSelect={handleLocationSelect}
       />
       <Legend layers={layers} />
