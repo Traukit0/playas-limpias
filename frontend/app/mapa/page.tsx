@@ -22,12 +22,12 @@ const MapViewer = dynamic(() => import("@/components/map/MapViewer").then(mod =>
 
 export default function MapaPage() {
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-[92.5vh]">
       {/* Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex h-16 items-center justify-between px-4 md:px-6">
+        <div className="flex h-12 items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+            <h1 className="text-xl font-bold tracking-tight md:text-2xl">
               Visor Cartográfico
             </h1>
             <Badge variant="outline" className="flex items-center gap-1">

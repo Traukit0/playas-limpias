@@ -91,7 +91,7 @@ export function MeasurementsPanel({
   }
 
   return (
-    <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg p-4 z-10 max-w-sm">
+    <div className="absolute top-1/2 right-4 transform -translate-y-1/2 bg-white rounded-lg shadow-lg p-4 z-10 max-w-sm">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className="w-full justify-between p-0 h-auto">

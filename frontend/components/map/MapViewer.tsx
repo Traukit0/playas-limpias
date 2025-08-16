@@ -15,6 +15,7 @@ import { Search } from './Search'
 import { Legend } from './Legend'
 import { MeasurementsPanel } from './MeasurementsPanel'
 import { MapPopup } from './MapPopup'
+import { MapStyleControl } from './MapStyleControl'
 import { useMapData } from '@/hooks/useMapData'
 import { useMapLayers } from '@/hooks/useMapLayers'
 import { useMapTools } from '@/hooks/useMapTools'
@@ -37,6 +38,7 @@ export function MapViewer({
   }, 
   onMapLoad 
 }: MapViewerProps) {
+  const [currentMapStyle, setCurrentMapStyle] = useState(MAP_CONFIG.styles.streets)
   const mapRef = useRef<any>(null)
   const [viewState, setViewState] = useState(initialViewState)
   const [popupInfo, setPopupInfo] = useState<any>(null)
@@ -87,7 +89,7 @@ export function MapViewer({
     }
     
     // Configurar estilos y fuentes
-    map.setStyle(MAP_CONFIG.styles.streets)
+    map.setStyle(currentMapStyle)
     
     // Agregar controles personalizados usando MapLibre directamente
     map.addControl(new maplibregl.NavigationControl(), 'top-right')
@@ -129,6 +131,13 @@ export function MapViewer({
     }
   }, [])
 
+  const handleMapStyleChange = useCallback((newStyleUrl: string) => {
+    if (mapRef.current) {
+      mapRef.current.setStyle(newStyleUrl)
+      setCurrentMapStyle(newStyleUrl)
+    }
+  }, [])
+
   const handleLocationSelect = useCallback((coordinates: [number, number], bbox?: [number, number, number, number]) => {
     if (mapRef.current) {
       if (bbox) {
@@ -164,7 +173,7 @@ export function MapViewer({
         onMouseMove={handleMapMouseMove}
         onMouseLeave={handleHoverLeave}
 
-        mapStyle={MAP_CONFIG.styles.streets}
+        mapStyle={currentMapStyle}
         style={{ width: '100%', height: '100%' }}
         interactiveLayerIds={['evidencias-layer', 'concesiones-fill', 'concesiones-border', 'analisis-layer', 'analisis-border']}
       >
@@ -285,6 +294,10 @@ export function MapViewer({
       </Map>
 
       {/* Controles superpuestos */}
+      <MapStyleControl 
+        currentStyle={currentMapStyle}
+        onStyleChange={handleMapStyleChange}
+      />
       <LayerControl 
         layers={layers}
         visibleLayers={visibleLayers}

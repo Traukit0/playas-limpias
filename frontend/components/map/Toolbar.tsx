@@ -110,7 +110,7 @@ export function Toolbar({
   }
 
   return (
-    <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-2 z-10">
+    <div className="absolute top-1/2 right-4 transform -translate-y-1/2 bg-white rounded-lg shadow-lg p-2 z-10">
       <TooltipProvider>
         <div className="flex flex-col space-y-1">
           {tools.map(tool => (

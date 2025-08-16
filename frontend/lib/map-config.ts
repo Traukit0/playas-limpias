@@ -1,10 +1,10 @@
 export const MAP_CONFIG = {
-  // Estilos de mapas base
+  // Estilos de mapas base - URLs actualizadas con proveedores reales
   styles: {
     streets: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-    satellite: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-    topographic: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
-    openstreetmap: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+    satellite: 'https://tiles.stadiamaps.com/styles/alidade_satellite.json',
+    topographic: 'https://tiles.stadiamaps.com/styles/alidade_smooth.json',
+    openstreetmap: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json'
   },
   
   // Configuración de clustering

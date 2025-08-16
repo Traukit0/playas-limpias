@@ -38,6 +38,11 @@
 - Agregar funcionalidad de búsqueda y filtros avanzados
 - Optimizar performance para grandes volúmenes de datos
 - Implementar clustering automático para evidencias
+- Mejorar velocidad de carga
+- Darle funcionalidad a la barra buscar / filtros
+- Darle funcionalidad a la barra de herramientas
+- Ver que pasa con los botones exportar / compartir
+- Cambiar colores, grosores de líneas
 
 ---
 
