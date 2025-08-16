@@ -43,9 +43,9 @@ export function LayerControl({ layers, visibleLayers, onLayerToggle }: LayerCont
       case 'evidencias':
         return '#4ECDC4'
       case 'concesiones':
-        return '#FFD93D'
+        return '#8FBC8F' // Color representativo de concesiones (verde musgo)
       case 'analisis':
-        return '#6C5CE7'
+        return '#FF4444'
       default:
         return '#666'
     }

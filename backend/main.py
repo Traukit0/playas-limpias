@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from routes import usuarios, denuncias, evidencias, concesiones, analisis, estados, auth, map_data
+from routes import usuarios, denuncias, evidencias, concesiones, analisis, estados, auth, map_data, search
 import os
 import time
 import uuid
@@ -33,6 +33,7 @@ app.include_router(concesiones.router, prefix="/concesiones", tags=["Concesiones
 app.include_router(analisis.router, prefix="/analisis", tags=["Análisis Geoespacial"])
 app.include_router(estados.router, prefix="/estados_denuncia", tags=["Catálogos"])
 app.include_router(map_data.router, prefix="/map", tags=["Datos del Mapa"])
+app.include_router(search.router, prefix="/search", tags=["Búsqueda"])
 
 # Middleware de access log simple (request_id, duración, status)
 access_logger = logging.getLogger("access")

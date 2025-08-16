@@ -26,18 +26,18 @@ interface MapStyleControlProps {
 
 const MAP_STYLES: MapStyle[] = [
   {
-    id: 'streets',
-    name: 'Mapa Claro',
-    url: MAP_CONFIG.styles.streets,
-    icon: <Map className="h-5 w-5" />,
-    description: 'Mapa de calles con etiquetas'
-  },
-  {
     id: 'satellite',
     name: 'Satelite',
     url: MAP_CONFIG.styles.satellite,
     icon: <Satellite className="h-5 w-5" />,
     description: 'Imagenes satelitales'
+  },
+  {
+    id: 'streets',
+    name: 'Mapa Claro',
+    url: MAP_CONFIG.styles.streets,
+    icon: <Map className="h-5 w-5" />,
+    description: 'Mapa de calles con etiquetas'
   },
   {
     id: 'topographic',

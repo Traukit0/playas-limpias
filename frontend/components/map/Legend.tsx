@@ -35,11 +35,11 @@ export function Legend({ layers }: LegendProps) {
             </p>
             <div className="space-y-1">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 border border-white shadow-sm" style={{ backgroundColor: '#FF6B6B' }}></div>
+                <div className="w-3 h-3 border border-white shadow-sm" style={{ backgroundColor: '#8FBC8F' }}></div>
                 <span className="text-xs text-gray-600">Moluscos</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 border border-white shadow-sm" style={{ backgroundColor: '#4ECDC4' }}></div>
+                <div className="w-3 h-3 border border-white shadow-sm" style={{ backgroundColor: '#FFB6C1' }}></div>
                 <span className="text-xs text-gray-600">Salmones</span>
               </div>
               <div className="flex items-center space-x-2">
@@ -47,7 +47,7 @@ export function Legend({ layers }: LegendProps) {
                 <span className="text-xs text-gray-600">Abalones o Equinodermos</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 border border-white shadow-sm" style={{ backgroundColor: '#6C5CE7' }}></div>
+                <div className="w-3 h-3 border border-white shadow-sm" style={{ backgroundColor: '#D2B48C' }}></div>
                 <span className="text-xs text-gray-600">Algas</span>
               </div>
             </div>
@@ -64,7 +64,7 @@ export function Legend({ layers }: LegendProps) {
                 <span className="text-xs text-gray-600">Puntos (evidencias)</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-purple-500 opacity-70"></div>
+                <div className="w-3 h-3 bg-red-500 opacity-70"></div>
                 <span className="text-xs text-gray-600">Análisis</span>
               </div>
             </div>

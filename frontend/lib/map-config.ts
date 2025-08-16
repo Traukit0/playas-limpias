@@ -27,43 +27,43 @@ export const MAP_CONFIG = {
       // Colores por tipo de concesión
       tipos: {
         'MOLUSCOS': {
-          color: '#FF6B6B', // Rojo coral
-          borderColor: '#D32F2F',
-          fillOpacity: 0.4,
-          hoverOpacity: 0.6
+          color: '#8FBC8F', // Verde musgo
+          borderColor: '#6B8E6B',
+          fillOpacity: 0.3,
+          hoverOpacity: 0.5
         },
         'SALMONES': {
-          color: '#4ECDC4', // Turquesa
-          borderColor: '#26A69A',
-          fillOpacity: 0.4,
-          hoverOpacity: 0.6
+          color: '#FFB6C1', // Rosa-naranja (color carne de salmón)
+          borderColor: '#FF8C69',
+          fillOpacity: 0.3,
+          hoverOpacity: 0.5
         },
         'ABALONES o EQUINODERMOS': {
-          color: '#FFD93D', // Amarillo
+          color: '#FFD93D', // Amarillo (mantener)
           borderColor: '#F57C00',
-          fillOpacity: 0.4,
-          hoverOpacity: 0.6
+          fillOpacity: 0.3,
+          hoverOpacity: 0.5
         },
         'ALGAS': {
-          color: '#6C5CE7', // Púrpura
-          borderColor: '#5F3DC4',
-          fillOpacity: 0.4,
-          hoverOpacity: 0.6
+          color: '#D2B48C', // Café claro (color algas pardas)
+          borderColor: '#A0522D',
+          fillOpacity: 0.3,
+          hoverOpacity: 0.5
         }
       },
       // Color por defecto para tipos no definidos
-      color: '#CCCCCC',
-      borderColor: '#999999',
+      color: '#8FBC8F',
+      borderColor: '#6B8E6B',
       fillOpacity: 0.3,
       hoverOpacity: 0.5,
       selectedOpacity: 0.7
     },
     analisis: {
-      color: '#6C5CE7',
-      borderColor: '#5F3DC4',
-      fillOpacity: 0.2,
-      hoverOpacity: 0.4,
-      selectedOpacity: 0.6
+      color: '#FF4444',
+      borderColor: '#CC0000',
+      fillOpacity: 0.4,
+      hoverOpacity: 0.6,
+      selectedOpacity: 0.8
     }
   },
   

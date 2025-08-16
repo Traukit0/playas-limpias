@@ -34,15 +34,15 @@ export function useMapLayers(map: maplibregl.Map | null) {
     {
       id: 'analisis',
       name: 'Análisis',
-      visible: false,
+      visible: true,
       type: 'analisis',
-      color: '#6C5CE7',
+      color: '#FF4444',
       icon: '📊',
       count: 0
     }
   ])
 
-  const [visibleLayers, setVisibleLayers] = useState<Set<string>>(new Set(['evidencias', 'concesiones']))
+  const [visibleLayers, setVisibleLayers] = useState<Set<string>>(new Set(['evidencias', 'concesiones', 'analisis']))
 
   // Actualizar visibilidad de capas en el mapa
   const updateLayerVisibility = useCallback((layerId: string, visible: boolean) => {

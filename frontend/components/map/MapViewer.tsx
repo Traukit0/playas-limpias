@@ -38,7 +38,7 @@ export function MapViewer({
   }, 
   onMapLoad 
 }: MapViewerProps) {
-  const [currentMapStyle, setCurrentMapStyle] = useState(MAP_CONFIG.styles.streets)
+  const [currentMapStyle, setCurrentMapStyle] = useState(MAP_CONFIG.styles.satellite)
   const mapRef = useRef<any>(null)
   const [viewState, setViewState] = useState(initialViewState)
   const [popupInfo, setPopupInfo] = useState<any>(null)
@@ -265,7 +265,7 @@ export function MapViewer({
                   'ALGAS', MAP_CONFIG.layers.concesiones.tipos['ALGAS'].borderColor,
                   MAP_CONFIG.layers.concesiones.borderColor // Color por defecto
                 ],
-                'line-width': 2
+                'line-width': 1
               }}
             />
           </Source>

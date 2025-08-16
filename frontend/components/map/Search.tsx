@@ -1,302 +1,229 @@
 "use client"
 
-import React, { useState, useCallback, useEffect, useRef } from 'react'
-import { Search as SearchIcon, X, Filter, MapPin, Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import React, { useState, useRef, useEffect } from 'react'
+import { Search as SearchIcon, X, Building2, FileText, AlertTriangle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Card, CardContent } from '@/components/ui/card'
-import { useGeocoding } from '@/hooks/useGeocoding'
-
-interface SearchFilters {
-  dateRange: {
-    start: string
-    end: string
-  } | null
-  region: string
-  status: string
-  type: string
-}
+import { useSearch } from '@/hooks/useSearch'
 
 interface SearchProps {
   onSearch: (term: string) => void
-  onFilter: (filters: SearchFilters) => void
-  onLocationSelect?: (coordinates: [number, number], bbox?: [number, number, number, number]) => void
+  onFilter: (filters: any) => void
+  onLocationSelect: (coordinates: [number, number], bbox?: [number, number, number, number]) => void
 }
 
 export function Search({ onSearch, onFilter, onLocationSelect }: SearchProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [filters, setFilters] = useState<SearchFilters>({
-    dateRange: null,
-    region: '',
-    status: '',
-    type: ''
-  })
-  const [activeFilters, setActiveFilters] = useState<string[]>([])
-  const [showGeocodingResults, setShowGeocodingResults] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
+  const searchRef = useRef<HTMLDivElement>(null)
   
-  const { loading: geocodingLoading, results: geocodingResults, searchLosLagosPlaces, clearResults } = useGeocoding()
-  const searchTimeoutRef = useRef<NodeJS.Timeout>()
+  const { 
+    search, 
+    clearResults,
+    results, 
+    loading, 
+    error 
+  } = useSearch()
 
-  // Búsqueda con geocodificación automática
-  const handleSearchInput = useCallback((value: string) => {
-    setSearchTerm(value)
-    setShowGeocodingResults(true)
-    
-    // Limpiar timeout anterior
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
-    }
-    
-    // Búsqueda con delay para evitar demasiadas peticiones
-    if (value.trim().length >= 3) {
-      searchTimeoutRef.current = setTimeout(() => {
-        searchLosLagosPlaces(value.trim())
-      }, 500)
-    } else {
-      clearResults()
-    }
-  }, [searchLosLagosPlaces, clearResults])
-
-  const handleSearch = useCallback(() => {
-    if (searchTerm.trim()) {
-      onSearch(searchTerm.trim())
-      setShowGeocodingResults(false)
-    }
-  }, [searchTerm, onSearch])
-
-  const handleLocationSelect = useCallback((coordinates: [number, number], bbox?: [number, number, number, number]) => {
-    onLocationSelect?.(coordinates, bbox)
-    setShowGeocodingResults(false)
-    setSearchTerm('')
-    clearResults()
-  }, [onLocationSelect, clearResults])
-
-  // Limpiar timeout al desmontar
+  // Cerrar al hacer click fuera
   useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
       }
     }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleFilterChange = useCallback((key: keyof SearchFilters, value: any) => {
-    const newFilters = { ...filters, [key]: value }
-    setFilters(newFilters)
-    
-    // Actualizar filtros activos
-    const newActiveFilters: string[] = []
-    if (newFilters.dateRange) newActiveFilters.push('Fecha')
-    if (newFilters.region) newActiveFilters.push('Región')
-    if (newFilters.status) newActiveFilters.push('Estado')
-    if (newFilters.type) newActiveFilters.push('Tipo')
-    
-    setActiveFilters(newActiveFilters)
-    onFilter(newFilters)
-  }, [filters, onFilter])
+  const handleSearch = () => {
+    if (searchTerm.trim()) {
+      search(searchTerm.trim())
+      setIsOpen(true)
+    }
+  }
 
-  const clearFilters = useCallback(() => {
-    setFilters({
-      dateRange: null,
-      region: '',
-      status: '',
-      type: ''
-    })
-    setActiveFilters([])
-    onFilter({
-      dateRange: null,
-      region: '',
-      status: '',
-      type: ''
-    })
-  }, [onFilter])
-
-  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSearch()
     }
-  }, [handleSearch])
+  }
+
+  const handleResultSelect = (result: any) => {
+    if (result.geometry) {
+      // Si es una concesión con geometría, centrar el mapa
+      try {
+        const geom = JSON.parse(result.geometry)
+        if (geom.coordinates && geom.coordinates[0] && geom.coordinates[0][0]) {
+          const coords = geom.coordinates[0][0]
+          const center = coords.reduce(
+            (acc: [number, number], coord: [number, number]) => [
+              acc[0] + coord[0],
+              acc[1] + coord[1]
+            ],
+            [0, 0]
+          ).map((val: number) => val / coords.length)
+          
+          onLocationSelect(center as [number, number])
+        }
+      } catch (e) {
+        console.error('Error parsing geometry:', e)
+      }
+    }
+  }
 
   return (
-    <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg p-4 z-10 min-w-96">
-      <div className="flex space-x-2">
-        {/* Búsqueda principal */}
-        <div className="flex-1 relative">
-          <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            type="text"
-            placeholder="Buscar por lugar, denuncia, concesión..."
-            value={searchTerm}
-            onChange={(e) => handleSearchInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            className="pl-10 pr-4"
-          />
+    <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20" ref={searchRef}>
+      <div className="relative">
+        <div className="flex items-center space-x-2 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border-2 border-gray-200 hover:border-blue-400 transition-all duration-200 p-2">
+          <div className="relative flex-1">
+            <Input
+              type="text"
+              placeholder="Buscar centro de cultivo, titular, lugar de denuncia..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="border-0 bg-transparent focus:ring-0 focus:border-0 text-gray-700 placeholder-gray-500 font-medium"
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearchTerm('')
+                  clearResults()
+                  setIsOpen(false)
+                }}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-gray-100 rounded-full"
+              >
+                <X className="h-3 w-3 text-gray-500" />
+              </Button>
+            )}
+          </div>
           
-          {/* Resultados de geocodificación */}
-          {showGeocodingResults && (geocodingResults.length > 0 || geocodingLoading) && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-              {geocodingLoading ? (
-                <div className="p-4 text-center">
-                  <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">Buscando lugares...</p>
-                </div>
-              ) : (
-                <div className="py-2">
-                  {geocodingResults.map((result) => (
-                    <Card key={result.id} className="m-2 border-0 shadow-none hover:bg-gray-50 cursor-pointer">
-                      <CardContent className="p-3" onClick={() => handleLocationSelect(result.coordinates, result.bbox)}>
-                        <div className="flex items-start gap-3">
-                          <MapPin className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {result.name}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {result.properties?.city && `${result.properties.city}, `}
-                              {result.properties?.state && `${result.properties.state}, `}
-                              {result.properties?.country}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          <Button
+            onClick={handleSearch}
+            disabled={loading || !searchTerm.trim()}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-md shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                <span>Buscando...</span>
+              </div>
+            ) : (
+              <span>Buscar</span>
+            )}
+          </Button>
         </div>
-        
-        {/* Botón de búsqueda */}
-        <Button onClick={handleSearch} className="px-4">
-          Buscar
-        </Button>
-        
-        {/* Filtros */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="relative">
-              <Filter className="h-4 w-4 mr-2" />
-              Filtros
-              {activeFilters.length > 0 && (
-                <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 text-xs">
-                  {activeFilters.length}
-                </Badge>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80" align="end">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold">Filtros</h4>
-                {activeFilters.length > 0 && (
-                  <Button variant="ghost" size="sm" onClick={clearFilters}>
-                    <X className="h-4 w-4 mr-1" />
-                    Limpiar
-                  </Button>
-                )}
-              </div>
-              
-              {/* Rango de fechas */}
-              <div className="space-y-2">
-                <Label>Rango de fechas</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input
-                    type="date"
-                    value={filters.dateRange?.start || ''}
-                    onChange={(e) => handleFilterChange('dateRange', {
-                      ...filters.dateRange,
-                      start: e.target.value
-                    })}
-                    placeholder="Desde"
-                  />
-                  <Input
-                    type="date"
-                    value={filters.dateRange?.end || ''}
-                    onChange={(e) => handleFilterChange('dateRange', {
-                      ...filters.dateRange,
-                      end: e.target.value
-                    })}
-                    placeholder="Hasta"
-                  />
+
+        {/* Resultados de búsqueda */}
+        {isOpen && results && (
+          <Card className="absolute top-full mt-3 w-[500px] max-h-96 overflow-y-auto bg-white/95 backdrop-blur-sm shadow-xl border-2 border-gray-200 rounded-lg">
+            <CardHeader className="pb-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
+              <CardTitle className="text-base font-bold text-gray-800 flex items-center gap-2">
+                <SearchIcon className="h-5 w-5 text-blue-600" />
+                Resultados para "{results.query}"
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 space-y-4">
+              {/* Reincidencias */}
+              {results.reincidencias.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-orange-600" />
+                    Reincidencias ({results.total_reincidencias})
+                  </h4>
+                                     {results.reincidencias.map((reincidencia, index) => (
+                     <div key={index} className="p-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg border-l-4 border-orange-500 mb-3 shadow-sm hover:shadow-md transition-shadow duration-200">
+                       <p className="font-bold text-sm text-gray-800 mb-1">{reincidencia.titular}</p>
+                       <p className="text-xs text-gray-600 mb-2">
+                         <span className="font-semibold">{reincidencia.centros_count}</span> centros, <span className="font-semibold">{reincidencia.denuncias_count}</span> denuncias
+                       </p>
+                       <p className="text-xs text-gray-500 bg-white/50 p-2 rounded border">
+                         <span className="font-semibold">Centros:</span> {reincidencia.centros_denunciados}
+                       </p>
+                     </div>
+                   ))}
                 </div>
-              </div>
-              
-              {/* Región */}
-              <div className="space-y-2">
-                <Label>Región</Label>
-                <Select
-                  value={filters.region}
-                  onValueChange={(value) => handleFilterChange('region', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar región" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="los-lagos">Los Lagos</SelectItem>
-                    <SelectItem value="chiloe">Chiloé</SelectItem>
-                    <SelectItem value="osorno">Osorno</SelectItem>
-                    <SelectItem value="llanquihue">Llanquihue</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* Estado */}
-              <div className="space-y-2">
-                <Label>Estado</Label>
-                <Select
-                  value={filters.status}
-                  onValueChange={(value) => handleFilterChange('status', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pendiente">Pendiente</SelectItem>
-                    <SelectItem value="en-proceso">En Proceso</SelectItem>
-                    <SelectItem value="completado">Completado</SelectItem>
-                    <SelectItem value="cancelado">Cancelado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* Tipo */}
-              <div className="space-y-2">
-                <Label>Tipo</Label>
-                <Select
-                  value={filters.type}
-                  onValueChange={(value) => handleFilterChange('type', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="denuncia">Denuncia</SelectItem>
-                    <SelectItem value="evidencia">Evidencia</SelectItem>
-                    <SelectItem value="concesion">Concesión</SelectItem>
-                    <SelectItem value="analisis">Análisis</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
+              )}
+
+              {/* Concesiones */}
+              {results.concesiones.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-blue-600" />
+                    Centros de Cultivo ({results.total_concesiones})
+                  </h4>
+                                     {results.concesiones.map((concesion, index) => (
+                     <div 
+                       key={index} 
+                       className="p-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 rounded-lg cursor-pointer border-l-4 border-blue-500 mb-3 shadow-sm hover:shadow-md transition-all duration-200"
+                       onClick={() => handleResultSelect(concesion)}
+                     >
+                       <p className="font-bold text-sm text-gray-800 mb-1">{concesion.nombre || `Centro ${concesion.codigo_centro}`}</p>
+                       <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-2">
+                         <p><span className="font-semibold">Código:</span> {concesion.codigo_centro}</p>
+                         <p><span className="font-semibold">Tipo:</span> {concesion.tipo}</p>
+                       </div>
+                       <p className="text-xs text-gray-600 mb-2"><span className="font-semibold">Titular:</span> {concesion.titular}</p>
+                       {concesion.denuncias_count > 0 && (
+                         <Badge variant="destructive" className="text-xs px-2 py-1 font-semibold">
+                           {concesion.denuncias_count} denuncia(s)
+                         </Badge>
+                       )}
+                     </div>
+                   ))}
+                </div>
+              )}
+
+              {/* Denuncias */}
+              {results.denuncias.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-red-600" />
+                    Denuncias ({results.total_denuncias})
+                  </h4>
+                                     {results.denuncias.map((denuncia, index) => (
+                     <div key={index} className="p-3 bg-gradient-to-r from-red-50 to-pink-50 rounded-lg border-l-4 border-red-500 mb-3 shadow-sm hover:shadow-md transition-shadow duration-200">
+                       <p className="font-bold text-sm text-gray-800 mb-1">{denuncia.lugar}</p>
+                       <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-2">
+                         <p><span className="font-semibold">Fecha:</span> {new Date(denuncia.fecha_inspeccion).toLocaleDateString()}</p>
+                         <p><span className="font-semibold">Estado:</span> {denuncia.estado}</p>
+                       </div>
+                       <p className="text-xs text-gray-500 bg-white/50 p-2 rounded border">
+                         <span className="font-semibold">{denuncia.evidencias_count}</span> evidencias, <span className="font-semibold">{denuncia.concesiones_afectadas_count}</span> centros afectados
+                       </p>
+                     </div>
+                   ))}
+                </div>
+              )}
+
+                             {results.total_concesiones === 0 && results.total_denuncias === 0 && results.total_reincidencias === 0 && (
+                 <div className="text-center py-8 text-gray-500">
+                   <div className="flex flex-col items-center space-y-2">
+                     <SearchIcon className="h-12 w-12 text-gray-300" />
+                     <p className="font-medium text-gray-600">No se encontraron resultados</p>
+                     <p className="text-sm text-gray-400">Intenta con otros términos de búsqueda</p>
+                   </div>
+                 </div>
+               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Error */}
+        {error && (
+          <Card className="absolute top-full mt-2 w-80 bg-red-50 border-red-200">
+            <CardContent className="p-2">
+              <p className="text-sm text-red-600">{error}</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
-      
-      {/* Filtros activos */}
-      {activeFilters.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
-          {activeFilters.map(filter => (
-            <Badge key={filter} variant="outline" className="text-xs">
-              {filter}
-            </Badge>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
