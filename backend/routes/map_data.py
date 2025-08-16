@@ -392,11 +392,15 @@ def obtener_analisis_mapa(
                     a.metodo,
                     a.observaciones,
                     ST_AsGeoJSON(a.buffer_geom) as geometry,
-                    COUNT(ra.id_resultado) as total_concesiones
+                    COUNT(ra.id_resultado) as total_concesiones,
+                    d.lugar,
+                    d.fecha_inspeccion,
+                    d.observaciones as observaciones_denuncia
                 FROM analisis_denuncia a
                 LEFT JOIN resultado_analisis ra ON a.id_analisis = ra.id_analisis
+                LEFT JOIN denuncias d ON a.id_denuncia = d.id_denuncia
                 WHERE ST_Intersects(a.buffer_geom, ST_MakeEnvelope(:lng1, :lat1, :lng2, :lat2, 4326))
-                GROUP BY a.id_analisis, a.id_denuncia, a.fecha_analisis, a.distancia_buffer, a.metodo, a.observaciones, a.buffer_geom
+                GROUP BY a.id_analisis, a.id_denuncia, a.fecha_analisis, a.distancia_buffer, a.metodo, a.observaciones, a.buffer_geom, d.lugar, d.fecha_inspeccion, d.observaciones
             """)
             result = db.execute(query, {
                 "lng1": lng1, "lat1": lat1, 
@@ -413,10 +417,14 @@ def obtener_analisis_mapa(
                     a.metodo,
                     a.observaciones,
                     ST_AsGeoJSON(a.buffer_geom) as geometry,
-                    COUNT(ra.id_resultado) as total_concesiones
+                    COUNT(ra.id_resultado) as total_concesiones,
+                    d.lugar,
+                    d.fecha_inspeccion,
+                    d.observaciones as observaciones_denuncia
                 FROM analisis_denuncia a
                 LEFT JOIN resultado_analisis ra ON a.id_analisis = ra.id_analisis
-                GROUP BY a.id_analisis, a.id_denuncia, a.fecha_analisis, a.distancia_buffer, a.metodo, a.observaciones, a.buffer_geom
+                LEFT JOIN denuncias d ON a.id_denuncia = d.id_denuncia
+                GROUP BY a.id_analisis, a.id_denuncia, a.fecha_analisis, a.distancia_buffer, a.metodo, a.observaciones, a.buffer_geom, d.lugar, d.fecha_inspeccion, d.observaciones
             """)
             result = db.execute(query).fetchall()
         
@@ -437,6 +445,9 @@ def obtener_analisis_mapa(
                             "metodo": row.metodo,
                             "observaciones": row.observaciones,
                             "total_concesiones": row.total_concesiones,
+                            "lugar_denuncia": row.lugar,
+                            "fecha_denuncia": row.fecha_inspeccion.isoformat() if row.fecha_inspeccion else None,
+                            "observaciones_denuncia": row.observaciones_denuncia,
                             "title": f"Análisis #{row.id_analisis}",
                             "description": f"Buffer: {row.distancia_buffer}m - {row.total_concesiones} concesiones"
                         }

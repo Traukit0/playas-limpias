@@ -24,7 +24,7 @@ export function MapPopup({ popupInfo, onClose }: MapPopupProps) {
   const sourceId = feature.source
 
   const renderEvidenciaContent = () => (
-    <div className="space-y-3">
+    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-lg text-blue-600">
           📍 Evidencia #{properties.id_evidencia}
@@ -106,7 +106,7 @@ export function MapPopup({ popupInfo, onClose }: MapPopupProps) {
     const tipoColor = getTipoColor(properties.tipo)
 
     return (
-    <div className="space-y-3">
+    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 space-y-3">
              <div className="flex items-center justify-between">
          <h3 className="font-semibold text-lg flex items-center gap-2" style={{ color: tipoColor }}>
            {getTipoIcon(properties.tipo)}
@@ -158,7 +158,7 @@ export function MapPopup({ popupInfo, onClose }: MapPopupProps) {
   }
 
   const renderAnalisisContent = () => (
-    <div className="space-y-3">
+    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-lg text-red-600">
           📊 Análisis #{properties.id_analisis}
@@ -176,11 +176,29 @@ export function MapPopup({ popupInfo, onClose }: MapPopupProps) {
           </span>
         </div>
         
+        {properties.lugar_denuncia && (
+          <div className="flex items-center space-x-2">
+            <MapPin className="h-4 w-4 text-gray-500" />
+            <span className="text-sm text-gray-600">
+              Lugar: {properties.lugar_denuncia}
+            </span>
+          </div>
+        )}
+        
+        {properties.fecha_denuncia && (
+          <div className="flex items-center space-x-2">
+            <Calendar className="h-4 w-4 text-gray-500" />
+            <span className="text-sm text-gray-600">
+              Fecha denuncia: {new Date(properties.fecha_denuncia).toLocaleDateString('es-CL')}
+            </span>
+          </div>
+        )}
+        
         {properties.fecha_analisis && (
           <div className="flex items-center space-x-2">
             <Calendar className="h-4 w-4 text-gray-500" />
             <span className="text-sm text-gray-600">
-              Fecha: {new Date(properties.fecha_analisis).toLocaleDateString('es-CL')}
+              Fecha análisis: {new Date(properties.fecha_analisis).toLocaleDateString('es-CL')}
             </span>
           </div>
         )}
@@ -204,14 +222,14 @@ export function MapPopup({ popupInfo, onClose }: MapPopupProps) {
           </span>
         </div>
         
-        {properties.observaciones && (
+        {properties.observaciones_denuncia && (
           <div className="space-y-1">
             <div className="flex items-center space-x-2">
               <FileText className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium">Observaciones:</span>
+              <span className="text-sm font-medium">Observaciones Generales:</span>
             </div>
             <p className="text-sm text-gray-700 pl-6">
-              {properties.observaciones}
+              {properties.observaciones_denuncia}
             </p>
           </div>
         )}
@@ -228,7 +246,7 @@ export function MapPopup({ popupInfo, onClose }: MapPopupProps) {
       return renderAnalisisContent()
     } else {
              return (
-         <div className="space-y-3">
+         <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-lg">
               {properties.title || 'Detalles'}
@@ -246,7 +264,7 @@ export function MapPopup({ popupInfo, onClose }: MapPopupProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-sm">
+    <div className="max-w-sm">
       {renderContent()}
     </div>
   )

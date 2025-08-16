@@ -4,11 +4,13 @@ import { useAuth } from './use-auth'
 
 interface SearchResult {
   query: string
-  concesiones: any[]
+  analisis?: any[]
   denuncias: any[]
+  concesiones: any[]
   reincidencias: any[]
-  total_concesiones: number
+  total_analisis?: number
   total_denuncias: number
+  total_concesiones: number
   total_reincidencias: number
 }
 

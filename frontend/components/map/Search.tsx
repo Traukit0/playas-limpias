@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react'
-import { Search as SearchIcon, X, Building2, FileText, AlertTriangle } from 'lucide-react'
+import { Search as SearchIcon, X, Building2, FileText, AlertTriangle, BarChart3 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -54,7 +54,7 @@ export function Search({ onSearch, onFilter, onLocationSelect }: SearchProps) {
 
   const handleResultSelect = (result: any) => {
     if (result.geometry) {
-      // Si es una concesión con geometría, centrar el mapa
+      // Si es una concesión o análisis con geometría, centrar el mapa
       try {
         const geom = JSON.parse(result.geometry)
         if (geom.coordinates && geom.coordinates[0] && geom.coordinates[0][0]) {
@@ -130,6 +130,59 @@ export function Search({ onSearch, onFilter, onLocationSelect }: SearchProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-3 space-y-4">
+              {/* Análisis */}
+              {results.analisis && results.analisis.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-purple-600" />
+                    Análisis ({results.total_analisis})
+                  </h4>
+                  {results.analisis.map((analisis, index) => (
+                    <div 
+                      key={index} 
+                      className="p-3 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 rounded-lg cursor-pointer border-l-4 border-purple-500 mb-3 shadow-sm hover:shadow-md transition-all duration-200"
+                      onClick={() => handleResultSelect(analisis)}
+                    >
+                      <p className="font-bold text-sm text-gray-800 mb-1">📊 Análisis #{analisis.id_analisis}</p>
+                      <p className="text-xs text-gray-600 mb-2">
+                        <span className="font-semibold">Lugar:</span> {analisis.lugar}
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-2">
+                        <p><span className="font-semibold">Método:</span> {analisis.metodo}</p>
+                        <p><span className="font-semibold">Buffer:</span> {analisis.distancia_buffer}m</p>
+                      </div>
+                      {analisis.fecha_analisis && (
+                        <p className="text-xs text-gray-600 mb-2">
+                          <span className="font-semibold">Fecha:</span> {new Date(analisis.fecha_analisis).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Denuncias */}
+              {results.denuncias.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-red-600" />
+                    Denuncias ({results.total_denuncias})
+                  </h4>
+                  {results.denuncias.map((denuncia, index) => (
+                    <div key={index} className="p-3 bg-gradient-to-r from-red-50 to-pink-50 rounded-lg border-l-4 border-red-500 mb-3 shadow-sm hover:shadow-md transition-shadow duration-200">
+                      <p className="font-bold text-sm text-gray-800 mb-1">{denuncia.lugar}</p>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-2">
+                        <p><span className="font-semibold">Fecha:</span> {new Date(denuncia.fecha_inspeccion).toLocaleDateString()}</p>
+                        <p><span className="font-semibold">Estado:</span> {denuncia.estado}</p>
+                      </div>
+                      <p className="text-xs text-gray-500 bg-white/50 p-2 rounded border">
+                        <span className="font-semibold">{denuncia.evidencias_count}</span> evidencias, <span className="font-semibold">{denuncia.concesiones_afectadas_count}</span> centros afectados
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Reincidencias */}
               {results.reincidencias.length > 0 && (
                 <div>
@@ -137,17 +190,17 @@ export function Search({ onSearch, onFilter, onLocationSelect }: SearchProps) {
                     <AlertTriangle className="h-4 w-4 text-orange-600" />
                     Reincidencias ({results.total_reincidencias})
                   </h4>
-                                     {results.reincidencias.map((reincidencia, index) => (
-                     <div key={index} className="p-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg border-l-4 border-orange-500 mb-3 shadow-sm hover:shadow-md transition-shadow duration-200">
-                       <p className="font-bold text-sm text-gray-800 mb-1">{reincidencia.titular}</p>
-                       <p className="text-xs text-gray-600 mb-2">
-                         <span className="font-semibold">{reincidencia.centros_count}</span> centros, <span className="font-semibold">{reincidencia.denuncias_count}</span> denuncias
-                       </p>
-                       <p className="text-xs text-gray-500 bg-white/50 p-2 rounded border">
-                         <span className="font-semibold">Centros:</span> {reincidencia.centros_denunciados}
-                       </p>
-                     </div>
-                   ))}
+                  {results.reincidencias.map((reincidencia, index) => (
+                    <div key={index} className="p-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg border-l-4 border-orange-500 mb-3 shadow-sm hover:shadow-md transition-shadow duration-200">
+                      <p className="font-bold text-sm text-gray-800 mb-1">{reincidencia.titular}</p>
+                      <p className="text-xs text-gray-600 mb-2">
+                        <span className="font-semibold">{reincidencia.centros_count}</span> centros, <span className="font-semibold">{reincidencia.denuncias_count}</span> denuncias
+                      </p>
+                      <p className="text-xs text-gray-500 bg-white/50 p-2 rounded border">
+                        <span className="font-semibold">Centros:</span> {reincidencia.centros_denunciados}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -202,7 +255,7 @@ export function Search({ onSearch, onFilter, onLocationSelect }: SearchProps) {
                 </div>
               )}
 
-                             {results.total_concesiones === 0 && results.total_denuncias === 0 && results.total_reincidencias === 0 && (
+                             {(!results.analisis || results.total_analisis === 0) && results.total_concesiones === 0 && results.total_denuncias === 0 && results.total_reincidencias === 0 && (
                  <div className="text-center py-8 text-gray-500">
                    <div className="flex flex-col items-center space-y-2">
                      <SearchIcon className="h-12 w-12 text-gray-300" />

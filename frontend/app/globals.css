@@ -105,3 +105,27 @@ body {
   box-shadow: 0 1px 3px rgba(183, 28, 28, 0.4);
   border-radius: var(--radius);
 }
+
+/* 🎯 Estilos para eliminar el fondo del popup de MapLibre */
+.custom-popup {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.custom-popup .maplibregl-popup-content {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.custom-popup .maplibregl-popup-tip {
+  /* Mantener la flecha visible */
+}
+
+.custom-popup .maplibregl-popup-close-button {
+  display: none !important;
+}

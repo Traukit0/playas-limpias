@@ -72,8 +72,8 @@ async def search(
             }
             concesiones.append(concesion)
         
-        # 2. Buscar denuncias
-        denuncias_query = text("""
+        # 2. Buscar denuncias y análisis
+        denuncias_analisis_query = text("""
             SELECT 
                 d.id_denuncia,
                 d.lugar,
@@ -81,21 +81,30 @@ async def search(
                 d.observaciones,
                 ed.estado,
                 COUNT(DISTINCT e.id_evidencia) as evidencias_count,
-                COUNT(DISTINCT ra.id_resultado) as concesiones_afectadas_count
+                COUNT(DISTINCT ra.id_resultado) as concesiones_afectadas_count,
+                a.id_analisis,
+                a.fecha_analisis,
+                a.distancia_buffer,
+                a.metodo,
+                a.observaciones as observaciones_analisis,
+                ST_AsGeoJSON(a.buffer_geom) as geometry
             FROM denuncias d
             LEFT JOIN estados_denuncia ed ON d.id_estado = ed.id_estado
             LEFT JOIN evidencias e ON d.id_denuncia = e.id_evidencia
-            LEFT JOIN analisis_denuncia ad ON d.id_denuncia = ad.id_analisis
-            LEFT JOIN resultado_analisis ra ON ad.id_analisis = ra.id_analisis
+            LEFT JOIN analisis_denuncia a ON d.id_denuncia = a.id_denuncia
+            LEFT JOIN resultado_analisis ra ON a.id_analisis = ra.id_analisis
             WHERE d.lugar ILIKE :search_term
-            GROUP BY d.id_denuncia, d.lugar, d.fecha_inspeccion, d.observaciones, ed.estado
+            GROUP BY d.id_denuncia, d.lugar, d.fecha_inspeccion, d.observaciones, ed.estado, 
+                     a.id_analisis, a.fecha_analisis, a.distancia_buffer, a.metodo, a.observaciones, a.buffer_geom
             ORDER BY d.fecha_inspeccion DESC
         """)
         
-        denuncias_result = db.execute(denuncias_query, {"search_term": search_term})
+        denuncias_analisis_result = db.execute(denuncias_analisis_query, {"search_term": search_term})
         denuncias = []
+        analisis = []
         
-        for row in denuncias_result:
+        for row in denuncias_analisis_result:
+            # Agregar denuncia
             denuncia = {
                 "id_denuncia": row.id_denuncia,
                 "lugar": row.lugar,
@@ -107,6 +116,21 @@ async def search(
                 "type": "denuncia"
             }
             denuncias.append(denuncia)
+            
+            # Si hay análisis asociado, agregarlo también
+            if row.id_analisis:
+                analisis_item = {
+                    "id_analisis": row.id_analisis,
+                    "id_denuncia": row.id_denuncia,
+                    "lugar": row.lugar,
+                    "fecha_analisis": row.fecha_analisis.isoformat() if row.fecha_analisis else None,
+                    "distancia_buffer": float(row.distancia_buffer) if row.distancia_buffer else 0,
+                    "metodo": row.metodo,
+                    "observaciones": row.observaciones_analisis,
+                    "geometry": row.geometry,
+                    "type": "analisis"
+                }
+                analisis.append(analisis_item)
         
         # 3. Análisis de reincidencias por titular
         reincidencias_titular_query = text("""
@@ -143,11 +167,13 @@ async def search(
         
         return {
             "query": q,
-            "concesiones": concesiones,
+            "analisis": analisis,
             "denuncias": denuncias,
+            "concesiones": concesiones,
             "reincidencias": reincidencias,
-            "total_concesiones": len(concesiones),
+            "total_analisis": len(analisis),
             "total_denuncias": len(denuncias),
+            "total_concesiones": len(concesiones),
             "total_reincidencias": len(reincidencias)
         }
         

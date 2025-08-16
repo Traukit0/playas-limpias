@@ -10,15 +10,13 @@ import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MAP_CONFIG } from '@/lib/map-config'
 import { LayerControl } from './LayerControl'
-import { Toolbar } from './Toolbar'
 import { Search } from './Search'
 import { Legend } from './Legend'
-import { MeasurementsPanel } from './MeasurementsPanel'
 import { MapPopup } from './MapPopup'
 import { MapStyleControl } from './MapStyleControl'
 import { useMapData } from '@/hooks/useMapData'
 import { useMapLayers } from '@/hooks/useMapLayers'
-import { useMapTools } from '@/hooks/useMapTools'
+
 import { useMapHover } from '@/hooks/useMapHover'
 
 interface MapViewerProps {
@@ -48,37 +46,83 @@ export function MapViewer({
   const { layers, visibleLayers, addLayer, toggleLayer, updateLayerCount } = useMapLayers(mapRef.current)
   const { loadMapData, mapData, loading } = useMapData(updateLayerCount)
   const { handleMouseMove: handleHoverMove, handleMouseLeave: handleHoverLeave } = useMapHover(mapRef.current)
-  const { 
-    activeTool,
-    measurements,
-    drawings,
-    isMeasuring,
-    isDrawing,
-    startMeasuring,
-    stopMeasuring,
-    startDrawing,
-    stopDrawing,
-    exportMap,
-    clearTools,
-    removeMeasurement,
-    removeDrawing
-  } = useMapTools(mapRef.current)
 
-  // Cargar datos cuando cambie el viewState
+
+  // Estado para manejar el debouncing de las llamadas a la API
+  const [isMoving, setIsMoving] = useState(false)
+  
+  // Refs para evitar re-renders innecesarios
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const lastLoadedZoomRef = useRef<number | null>(null)
+  const lastLoadedBoundsRef = useRef<string | null>(null)
+  const isMovingRef = useRef(false)
+
+  // Cargar datos con debouncing inteligente y optimizaciones
   useEffect(() => {
-    if (mapRef.current) {
+    if (mapRef.current && !loading) {
       const bounds = mapRef.current.getBounds()
-      loadMapData({
-        bounds: [
-          bounds.getWest(),
-          bounds.getSouth(),
-          bounds.getEast(),
-          bounds.getNorth()
-        ],
-        zoom: Math.floor(viewState.zoom)
-      })
+      const currentBounds = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`
+      const currentZoom = Math.floor(viewState.zoom)
+      
+      // Verificar si realmente necesitamos cargar nuevos datos
+      const boundsChanged = lastLoadedBoundsRef.current !== currentBounds
+      const zoomChanged = lastLoadedZoomRef.current !== currentZoom
+      
+      // Solo cargar si hay cambios significativos
+      if (!boundsChanged && !zoomChanged) {
+        return
+      }
+      
+      // Limpiar timeout anterior si existe
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current)
+      }
+
+      // Si el mapa está en movimiento, usar debouncing
+      if (isMovingRef.current) {
+        const timeoutId = setTimeout(() => {
+          const bounds = mapRef.current?.getBounds()
+          if (bounds) {
+            loadMapData({
+              bounds: [
+                bounds.getWest(),
+                bounds.getSouth(),
+                bounds.getEast(),
+                bounds.getNorth()
+              ],
+              zoom: currentZoom
+            })
+            lastLoadedBoundsRef.current = currentBounds
+            lastLoadedZoomRef.current = currentZoom
+          }
+          setIsMoving(false)
+          isMovingRef.current = false
+        }, 500) // Debounce de 500ms cuando está en movimiento
+        
+        debounceTimeoutRef.current = timeoutId
+      } else {
+        // Si no está en movimiento, cargar inmediatamente
+        loadMapData({
+          bounds: [
+            bounds.getWest(),
+            bounds.getSouth(),
+            bounds.getEast(),
+            bounds.getNorth()
+          ],
+          zoom: currentZoom
+        })
+        lastLoadedBoundsRef.current = currentBounds
+        lastLoadedZoomRef.current = currentZoom
+      }
     }
-  }, [viewState, loadMapData])
+
+    // Cleanup function
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current)
+      }
+    }
+  }, [viewState.zoom, viewState.longitude, viewState.latitude, loadMapData, loading])
 
 
 
@@ -116,7 +160,7 @@ export function MapViewer({
         zoom: Math.floor(viewState.zoom)
       })
     }, 100) // Pequeño delay para asegurar que el mapa esté completamente cargado
-  }, [onMapLoad, currentMapStyle, loadMapData, viewState.zoom])
+  }, [onMapLoad, currentMapStyle, loadMapData])
 
   // Manejar click en el mapa
   const handleMapClick = useCallback((event: any) => {
@@ -173,6 +217,42 @@ export function MapViewer({
     }
   }, [])
 
+  // Ref para throttling del movimiento del mapa
+  const moveThrottleRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Manejar movimiento del mapa con throttling
+  const handleMapMove = useCallback((evt: any) => {
+    // Throttle para evitar demasiadas actualizaciones de estado
+    if (moveThrottleRef.current) {
+      return
+    }
+    
+    moveThrottleRef.current = setTimeout(() => {
+      setViewState(evt.viewState)
+      setIsMoving(true)
+      isMovingRef.current = true
+      moveThrottleRef.current = null
+    }, 16) // ~60fps
+  }, [])
+
+  // Manejar cuando el mapa deja de moverse
+  const handleMapMoveEnd = useCallback(() => {
+    setIsMoving(false)
+    isMovingRef.current = false
+  }, [])
+
+  // Cleanup de timeouts al desmontar
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current)
+      }
+      if (moveThrottleRef.current) {
+        clearTimeout(moveThrottleRef.current)
+      }
+    }
+  }, [])
+
   // Manejar hover en el mapa
   const handleMapMouseMove = useCallback((event: any) => {
     handleHoverMove(event)
@@ -183,7 +263,8 @@ export function MapViewer({
       <Map
         ref={mapRef}
         {...viewState}
-        onMove={evt => setViewState(evt.viewState)}
+        onMove={handleMapMove}
+        onMoveEnd={handleMapMoveEnd}
         onLoad={handleMapLoad}
         onClick={handleMapClick}
         onMouseMove={handleMapMouseMove}
@@ -300,6 +381,13 @@ export function MapViewer({
             onClose={() => setPopupInfo(null)}
             closeOnClick={false}
             maxWidth="400px"
+            className="custom-popup"
+            style={{
+              backgroundColor: 'transparent',
+              border: 'none',
+              boxShadow: 'none',
+              padding: 0
+            }}
           >
             <MapPopup 
               popupInfo={popupInfo} 
@@ -319,37 +407,31 @@ export function MapViewer({
         visibleLayers={visibleLayers}
         onLayerToggle={toggleLayer}
       />
-      <Toolbar 
-        onMeasure={isMeasuring ? stopMeasuring : startMeasuring}
-        onDraw={isDrawing ? stopDrawing : startDrawing}
-        onExport={exportMap}
-        onFilter={() => console.log('Filtrar')}
-        onShare={() => console.log('Compartir')}
-        onInfo={() => console.log('Información')}
-        onClear={clearTools}
-        activeTool={activeTool}
-        isMeasuring={isMeasuring}
-        isDrawing={isDrawing}
-      />
+
       <Search 
         onSearch={(term: string) => console.log('Buscar:', term)}
         onFilter={(filters: any) => console.log('Filtrar:', filters)}
         onLocationSelect={handleLocationSelect}
       />
       <Legend layers={layers} />
-      <MeasurementsPanel
-        measurements={measurements}
-        drawings={drawings}
-        onRemoveMeasurement={removeMeasurement}
-        onRemoveDrawing={removeDrawing}
-      />
+
       
       {/* Indicador de carga */}
-      {loading && (
+      {loading && !isMoving && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg px-4 py-2 z-20">
           <div className="flex items-center space-x-2">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
             <span className="text-sm">Cargando datos...</span>
+          </div>
+        </div>
+      )}
+      
+      {/* Indicador sutil durante movimiento */}
+      {isMoving && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white/80 backdrop-blur-sm rounded-lg px-3 py-1 z-20">
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+            <span className="text-xs text-gray-600">Actualizando...</span>
           </div>
         </div>
       )}

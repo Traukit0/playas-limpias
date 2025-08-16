@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { API_URL } from '@/lib/api-config'
 import { useAuth } from './use-auth'
 
@@ -26,14 +26,33 @@ export function useMapData(onLayerCountUpdate?: (layerId: string, count: number)
     loading: false,
     error: null
   })
+  
+  // Cache simple para evitar llamadas duplicadas
+  const cache = useRef<Map<string, { data: MapData; timestamp: number }>>(new Map())
+  const CACHE_DURATION = 30000 // 30 segundos
 
   const loadMapData = useCallback(async (params: MapBounds) => {
+    const { bounds, zoom } = params
+    const boundsStr = bounds.join(',')
+    const cacheKey = `${boundsStr}_${zoom}`
+    
+    // Verificar caché
+    const cached = cache.current.get(cacheKey)
+    const now = Date.now()
+    
+    if (cached && (now - cached.timestamp) < CACHE_DURATION) {
+      console.log('Usando datos en caché para:', cacheKey)
+      setState({
+        mapData: cached.data,
+        loading: false,
+        error: null
+      })
+      return
+    }
+    
     setState(prev => ({ ...prev, loading: true, error: null }))
 
     try {
-      const { bounds, zoom } = params
-      const boundsStr = bounds.join(',')
-      
       // Verificar token de autenticación
       console.log('Token de autenticación:', token ? 'Presente' : 'Ausente')
       console.log('Cargando datos para bounds:', boundsStr, 'zoom:', zoom)
@@ -103,6 +122,20 @@ export function useMapData(onLayerCountUpdate?: (layerId: string, count: number)
         onLayerCountUpdate?.('analisis', 0)
       }
 
+      // Guardar en caché
+      cache.current.set(cacheKey, {
+        data: newMapData,
+        timestamp: now
+      })
+      
+      // Limpiar caché antiguo (mantener solo los últimos 50 items)
+      if (cache.current.size > 50) {
+        const entries = Array.from(cache.current.entries())
+        entries.sort((a, b) => b[1].timestamp - a[1].timestamp)
+        const newCache = new Map(entries.slice(0, 50))
+        cache.current = newCache
+      }
+      
       setState({
         mapData: newMapData,
         loading: false,
