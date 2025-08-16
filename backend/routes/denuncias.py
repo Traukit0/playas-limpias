@@ -7,7 +7,7 @@ from models.usuarios import Usuario
 from models.estados import EstadoDenuncia
 from models.evidencias import Evidencia
 from models.analisis import AnalisisDenuncia
-from schemas.denuncias import DenunciaCreate, DenunciaResponse, DenunciaDetalleResponse
+from schemas.denuncias import DenunciaCreate, DenunciaResponse, DenunciaDetalleResponse, DenunciaHistorialResponse
 from schemas.evidencias import EvidenciaResponseGeoJSON, FotoInfo
 from schemas.analisis import AnalisisResponseGeoJSON, ResultadoAnalisisResponse
 from security.auth import verificar_token
@@ -70,6 +70,69 @@ def obtener_mis_denuncias(
     ).order_by(Denuncia.fecha_ingreso.desc()).all()
     
     return denuncias
+
+@router.get("/historial", response_model=List[DenunciaHistorialResponse])
+def obtener_historial_denuncias(
+    usuario_actual: Usuario = Depends(verificar_token),
+    db: Session = Depends(get_db)
+):
+    """
+    Obtiene el historial completo de denuncias con información adicional
+    """
+    # Consulta principal con JOIN para obtener información del usuario
+    query = text("""
+        SELECT 
+            d.id_denuncia,
+            d.id_usuario,
+            d.id_estado,
+            d.fecha_inspeccion,
+            d.fecha_ingreso,
+            d.lugar,
+            d.observaciones,
+            u.nombre as usuario_nombre,
+            u.email as usuario_email,
+            COALESCE(ev_count.total_evidencias, 0) as total_evidencias,
+            COALESCE(con_count.total_concesiones, 0) as total_concesiones_afectadas
+        FROM denuncias d
+        LEFT JOIN usuarios u ON d.id_usuario = u.id_usuario
+        LEFT JOIN (
+            SELECT id_denuncia, COUNT(*) as total_evidencias
+            FROM evidencias
+            GROUP BY id_denuncia
+        ) ev_count ON d.id_denuncia = ev_count.id_denuncia
+        LEFT JOIN (
+            SELECT 
+                ad.id_denuncia,
+                COUNT(DISTINCT ra.id_concesion) as total_concesiones
+            FROM analisis_denuncia ad
+            LEFT JOIN resultado_analisis ra ON ad.id_analisis = ra.id_analisis
+            GROUP BY ad.id_denuncia
+        ) con_count ON d.id_denuncia = con_count.id_denuncia
+        WHERE d.id_usuario = :id_usuario
+        ORDER BY d.fecha_ingreso DESC
+    """)
+    
+    result = db.execute(query, {"id_usuario": usuario_actual.id_usuario}).fetchall()
+    
+    historial = []
+    for row in result:
+        historial.append(DenunciaHistorialResponse(
+            id_denuncia=row.id_denuncia,
+            id_usuario=row.id_usuario,
+            id_estado=row.id_estado,
+            fecha_inspeccion=row.fecha_inspeccion,
+            fecha_ingreso=row.fecha_ingreso,
+            lugar=row.lugar,
+            observaciones=row.observaciones,
+            usuario={
+                "nombre": row.usuario_nombre,
+                "email": row.usuario_email
+            },
+            total_evidencias=row.total_evidencias,
+            total_concesiones_afectadas=row.total_concesiones_afectadas
+        ))
+    
+    return historial
 
 @router.get("/{id_denuncia}/detalles", response_model=DenunciaDetalleResponse)
 def obtener_detalles_denuncia(
