@@ -80,6 +80,8 @@ export function MapViewer({
     }
   }, [viewState, loadMapData])
 
+
+
   // Manejar carga del mapa
   const handleMapLoad = useCallback((event: any) => {
     const map = event.target
@@ -100,7 +102,21 @@ export function MapViewer({
       trackUserLocation: true
     }), 'top-right')
     map.addControl(new maplibregl.FullscreenControl(), 'top-right')
-  }, [onMapLoad])
+
+    // Cargar datos iniciales después de que el mapa esté listo
+    setTimeout(() => {
+      const bounds = map.getBounds()
+      loadMapData({
+        bounds: [
+          bounds.getWest(),
+          bounds.getSouth(),
+          bounds.getEast(),
+          bounds.getNorth()
+        ],
+        zoom: Math.floor(viewState.zoom)
+      })
+    }, 100) // Pequeño delay para asegurar que el mapa esté completamente cargado
+  }, [onMapLoad, currentMapStyle, loadMapData, viewState.zoom])
 
   // Manejar click en el mapa
   const handleMapClick = useCallback((event: any) => {
