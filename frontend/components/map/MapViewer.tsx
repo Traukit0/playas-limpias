@@ -207,15 +207,39 @@ export function MapViewer({
               id="concesiones-fill"
               type="fill"
               paint={{
-                'fill-color': MAP_CONFIG.layers.concesiones.color,
-                'fill-opacity': MAP_CONFIG.layers.concesiones.fillOpacity
+                'fill-color': [
+                  'match',
+                  ['get', 'tipo'],
+                  'MOLUSCOS', MAP_CONFIG.layers.concesiones.tipos['MOLUSCOS'].color,
+                  'SALMONES', MAP_CONFIG.layers.concesiones.tipos['SALMONES'].color,
+                  'ABALONES o EQUINODERMOS', MAP_CONFIG.layers.concesiones.tipos['ABALONES o EQUINODERMOS'].color,
+                  'ALGAS', MAP_CONFIG.layers.concesiones.tipos['ALGAS'].color,
+                  MAP_CONFIG.layers.concesiones.color // Color por defecto
+                ],
+                'fill-opacity': [
+                  'match',
+                  ['get', 'tipo'],
+                  'MOLUSCOS', MAP_CONFIG.layers.concesiones.tipos['MOLUSCOS'].fillOpacity,
+                  'SALMONES', MAP_CONFIG.layers.concesiones.tipos['SALMONES'].fillOpacity,
+                  'ABALONES o EQUINODERMOS', MAP_CONFIG.layers.concesiones.tipos['ABALONES o EQUINODERMOS'].fillOpacity,
+                  'ALGAS', MAP_CONFIG.layers.concesiones.tipos['ALGAS'].fillOpacity,
+                  MAP_CONFIG.layers.concesiones.fillOpacity // Opacidad por defecto
+                ]
               }}
             />
             <Layer
               id="concesiones-border"
               type="line"
               paint={{
-                'line-color': MAP_CONFIG.layers.concesiones.borderColor,
+                'line-color': [
+                  'match',
+                  ['get', 'tipo'],
+                  'MOLUSCOS', MAP_CONFIG.layers.concesiones.tipos['MOLUSCOS'].borderColor,
+                  'SALMONES', MAP_CONFIG.layers.concesiones.tipos['SALMONES'].borderColor,
+                  'ABALONES o EQUINODERMOS', MAP_CONFIG.layers.concesiones.tipos['ABALONES o EQUINODERMOS'].borderColor,
+                  'ALGAS', MAP_CONFIG.layers.concesiones.tipos['ALGAS'].borderColor,
+                  MAP_CONFIG.layers.concesiones.borderColor // Color por defecto
+                ],
                 'line-width': 2
               }}
             />

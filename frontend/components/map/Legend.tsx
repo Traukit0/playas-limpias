@@ -143,6 +143,31 @@ export function Legend({ layers }: LegendProps) {
             </div>
           )}
           
+          {/* Tipos de concesiones */}
+          <div className="pt-2 border-t border-gray-200">
+            <p className="text-xs text-gray-500 font-medium mb-2">
+              Tipos de Concesiones:
+            </p>
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 border border-white shadow-sm" style={{ backgroundColor: '#FF6B6B' }}></div>
+                <span className="text-xs text-gray-600">Moluscos</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 border border-white shadow-sm" style={{ backgroundColor: '#4ECDC4' }}></div>
+                <span className="text-xs text-gray-600">Salmones</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 border border-white shadow-sm" style={{ backgroundColor: '#FFD93D' }}></div>
+                <span className="text-xs text-gray-600">Abalones o Equinodermos</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 border border-white shadow-sm" style={{ backgroundColor: '#6C5CE7' }}></div>
+                <span className="text-xs text-gray-600">Algas</span>
+              </div>
+            </div>
+          </div>
+
           {/* Información general */}
           <div className="pt-2 border-t border-gray-200">
             <p className="text-xs text-gray-500">
@@ -151,7 +176,7 @@ export function Legend({ layers }: LegendProps) {
             <div className="mt-1 space-y-1">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                <span className="text-xs text-gray-600">Puntos (denuncias, evidencias)</span>
+                <span className="text-xs text-gray-600">Puntos (evidencias)</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-yellow-500 opacity-70"></div>

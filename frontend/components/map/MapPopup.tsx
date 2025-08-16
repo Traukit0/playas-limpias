@@ -80,10 +80,24 @@ export function MapPopup({ popupInfo, onClose }: MapPopupProps) {
     </div>
   )
 
-  const renderConcesionContent = () => (
+  const renderConcesionContent = () => {
+    // Obtener color según el tipo de concesión
+    const getTipoColor = (tipo: string) => {
+      switch (tipo) {
+        case 'MOLUSCOS': return '#FF6B6B'
+        case 'SALMONES': return '#4ECDC4'
+        case 'ABALONES o EQUINODERMOS': return '#FFD93D'
+        case 'ALGAS': return '#6C5CE7'
+        default: return '#CCCCCC'
+      }
+    }
+
+    const tipoColor = getTipoColor(properties.tipo)
+
+    return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-lg text-yellow-600">
+        <h3 className="font-semibold text-lg" style={{ color: tipoColor }}>
           🏭 Código de centro N° {properties.codigo_centro}
         </h3>
         <Button variant="ghost" size="sm" onClick={onClose}>
@@ -128,7 +142,8 @@ export function MapPopup({ popupInfo, onClose }: MapPopupProps) {
         </div>
       </div>
     </div>
-  )
+    )
+  }
 
   const renderAnalisisContent = () => (
     <div className="space-y-3">

@@ -24,8 +24,36 @@ export const MAP_CONFIG = {
       selectedColor: '#009688'
     },
     concesiones: {
-      color: '#FFD93D',
-      borderColor: '#F57C00',
+      // Colores por tipo de concesión
+      tipos: {
+        'MOLUSCOS': {
+          color: '#FF6B6B', // Rojo coral
+          borderColor: '#D32F2F',
+          fillOpacity: 0.4,
+          hoverOpacity: 0.6
+        },
+        'SALMONES': {
+          color: '#4ECDC4', // Turquesa
+          borderColor: '#26A69A',
+          fillOpacity: 0.4,
+          hoverOpacity: 0.6
+        },
+        'ABALONES o EQUINODERMOS': {
+          color: '#FFD93D', // Amarillo
+          borderColor: '#F57C00',
+          fillOpacity: 0.4,
+          hoverOpacity: 0.6
+        },
+        'ALGAS': {
+          color: '#6C5CE7', // Púrpura
+          borderColor: '#5F3DC4',
+          fillOpacity: 0.4,
+          hoverOpacity: 0.6
+        }
+      },
+      // Color por defecto para tipos no definidos
+      color: '#CCCCCC',
+      borderColor: '#999999',
       fillOpacity: 0.3,
       hoverOpacity: 0.5,
       selectedOpacity: 0.7
