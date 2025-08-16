@@ -14,9 +14,11 @@ import { Toolbar } from './Toolbar'
 import { Search } from './Search'
 import { Legend } from './Legend'
 import { MeasurementsPanel } from './MeasurementsPanel'
+import { MapPopup } from './MapPopup'
 import { useMapData } from '@/hooks/useMapData'
 import { useMapLayers } from '@/hooks/useMapLayers'
 import { useMapTools } from '@/hooks/useMapTools'
+import { useMapHover } from '@/hooks/useMapHover'
 
 interface MapViewerProps {
   initialViewState?: {
@@ -43,6 +45,7 @@ export function MapViewer({
   // Hooks personalizados
   const { layers, visibleLayers, addLayer, toggleLayer, updateLayerCount } = useMapLayers(mapRef.current)
   const { loadMapData, mapData, loading } = useMapData(updateLayerCount)
+  const { handleMouseMove: handleHoverMove, handleMouseLeave: handleHoverLeave } = useMapHover(mapRef.current)
   const { 
     activeTool,
     measurements,
@@ -99,14 +102,29 @@ export function MapViewer({
 
   // Manejar click en el mapa
   const handleMapClick = useCallback((event: any) => {
-    const feature = event.features?.[0]
-    if (feature) {
+    console.log('Map clicked at:', event.lngLat)
+    console.log('Features at click:', event.features)
+    
+    const features = event.features || []
+    
+    // Buscar la primera feature que sea de una capa interactiva
+    const interactiveFeature = features.find((feature: any) => {
+      const sourceId = feature.source
+      console.log('Checking feature source:', sourceId)
+      return sourceId === 'evidencias-source' || 
+             sourceId === 'concesiones-source' || 
+             sourceId === 'analisis-source'
+    })
+    
+    if (interactiveFeature) {
+      console.log('Interactive feature found:', interactiveFeature)
       setPopupInfo({
         longitude: event.lngLat.lng,
         latitude: event.lngLat.lat,
-        feature: feature
+        feature: interactiveFeature
       })
     } else {
+      console.log('No interactive feature found')
       setPopupInfo(null)
     }
   }, [])
@@ -132,15 +150,8 @@ export function MapViewer({
 
   // Manejar hover en el mapa
   const handleMapMouseMove = useCallback((event: any) => {
-    const map = event.target
-    const features = map.queryRenderedFeatures(event.point)
-    
-    if (features.length > 0) {
-      map.getCanvas().style.cursor = 'pointer'
-    } else {
-      map.getCanvas().style.cursor = ''
-    }
-  }, [])
+    handleHoverMove(event)
+  }, [handleHoverMove])
 
   return (
     <div className="relative w-full h-full">
@@ -151,57 +162,15 @@ export function MapViewer({
         onLoad={handleMapLoad}
         onClick={handleMapClick}
         onMouseMove={handleMapMouseMove}
+        onMouseLeave={handleHoverLeave}
 
         mapStyle={MAP_CONFIG.styles.streets}
         style={{ width: '100%', height: '100%' }}
-        interactiveLayerIds={layers.map(layer => layer.id)}
+        interactiveLayerIds={['evidencias-layer', 'concesiones-fill', 'concesiones-border', 'analisis-layer', 'analisis-border']}
       >
         {/* Fuentes de datos dinámicas */}
-
-        {mapData.evidencias && (
-          <Source
-            id="evidencias-source"
-            type="geojson"
-            data={mapData.evidencias}
-          >
-            <Layer
-              id="evidencias-layer"
-              type="circle"
-              paint={{
-                'circle-color': MAP_CONFIG.layers.evidencias.color,
-                'circle-radius': 6,
-                'circle-stroke-width': 1,
-                'circle-stroke-color': '#fff'
-              }}
-            />
-          </Source>
-        )}
-
-        {mapData.concesiones && (
-          <Source
-            id="concesiones-source"
-            type="geojson"
-            data={mapData.concesiones}
-          >
-            <Layer
-              id="concesiones-fill"
-              type="fill"
-              paint={{
-                'fill-color': MAP_CONFIG.layers.concesiones.color,
-                'fill-opacity': MAP_CONFIG.layers.concesiones.fillOpacity
-              }}
-            />
-            <Layer
-              id="concesiones-border"
-              type="line"
-              paint={{
-                'line-color': MAP_CONFIG.layers.concesiones.borderColor,
-                'line-width': 2
-              }}
-            />
-          </Source>
-        )}
-
+        
+        {/* Análisis (capa base - se dibuja primero) */}
         {mapData.analisis && (
           <Source
             id="analisis-source"
@@ -227,6 +196,52 @@ export function MapViewer({
           </Source>
         )}
 
+        {/* Concesiones (capa intermedia) */}
+        {mapData.concesiones && (
+          <Source
+            id="concesiones-source"
+            type="geojson"
+            data={mapData.concesiones}
+          >
+            <Layer
+              id="concesiones-fill"
+              type="fill"
+              paint={{
+                'fill-color': MAP_CONFIG.layers.concesiones.color,
+                'fill-opacity': MAP_CONFIG.layers.concesiones.fillOpacity
+              }}
+            />
+            <Layer
+              id="concesiones-border"
+              type="line"
+              paint={{
+                'line-color': MAP_CONFIG.layers.concesiones.borderColor,
+                'line-width': 2
+              }}
+            />
+          </Source>
+        )}
+
+        {/* Evidencias (capa superior - se dibuja último) */}
+        {mapData.evidencias && (
+          <Source
+            id="evidencias-source"
+            type="geojson"
+            data={mapData.evidencias}
+          >
+            <Layer
+              id="evidencias-layer"
+              type="circle"
+              paint={{
+                'circle-color': MAP_CONFIG.layers.evidencias.color,
+                'circle-radius': 6,
+                'circle-stroke-width': 1,
+                'circle-stroke-color': '#fff'
+              }}
+            />
+          </Source>
+        )}
+
         {/* Popup informativo */}
         {popupInfo && (
           <Popup
@@ -235,20 +250,12 @@ export function MapViewer({
             anchor="bottom"
             onClose={() => setPopupInfo(null)}
             closeOnClick={false}
+            maxWidth="400px"
           >
-            <div className="p-2">
-              <h3 className="font-semibold text-sm">
-                {popupInfo.feature.properties?.title || 'Detalles'}
-              </h3>
-              <p className="text-xs text-gray-600">
-                {popupInfo.feature.properties?.description || 'Sin descripción'}
-              </p>
-              {popupInfo.feature.properties?.fecha && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Fecha: {new Date(popupInfo.feature.properties.fecha).toLocaleDateString()}
-                </p>
-              )}
-            </div>
+            <MapPopup 
+              popupInfo={popupInfo} 
+              onClose={() => setPopupInfo(null)} 
+            />
           </Popup>
         )}
       </Map>
