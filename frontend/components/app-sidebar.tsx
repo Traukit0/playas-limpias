@@ -40,9 +40,9 @@ const menuItems = [
     href: "/mapa",
   },
   {
-    title: "Reportes",
+    title: "Reincidencias",
     icon: FileBarChart,
-    href: "/reportes",
+    href: "/reincidencias",
   },
   {
     title: "Mis Denuncias",

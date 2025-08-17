@@ -106,6 +106,20 @@ body {
   border-radius: var(--radius);
 }
 
+/* Leaflet CSS fixes */
+.leaflet-container {
+  z-index: 0;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+}
+
+.leaflet-popup-content {
+  margin: 8px 12px;
+  font-family: inherit;
+}
+
 /* 🎯 Estilos para eliminar el fondo del popup de MapLibre */
 .custom-popup {
   background: transparent !important;

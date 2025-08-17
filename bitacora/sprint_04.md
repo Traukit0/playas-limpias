@@ -36,6 +36,20 @@
 - Optimización de useEffects y useCallbacks
 - Uso de refs para evitar re-renders innecesarios
 - Cleanup automático de timeouts
+- **Desarrollo de página de historial completa:**
+- Reemplazo de datos mock por datos reales desde backend
+- Implementación de filtros por estado y búsqueda de texto
+- Funcionalidad de descarga de PDF y KMZ para cada denuncia
+- Estadísticas detalladas (total, por estado, último mes)
+- **Creación de página de reincidencias:**
+- Análisis visual de empresas con centros de cultivo involucrados en denuncias
+- Clasificación de riesgo (alto, medio, bajo) basada en denuncias y centros
+- Múltiples vistas: tabla, tarjetas y gráficos
+- Filtros por nivel de riesgo y búsqueda por empresa
+- **Rediseño del dashboard principal:**
+- Eliminación de datos falsos y reemplazo con datos reales
+- Simplificación de interfaz con acciones rápidas
+- Optimización de layout para mejor usabilidad
 ---
 
 ### ⚠️ Dificultades encontradas
@@ -55,6 +69,15 @@
 - Ordenamiento correcto de resultados por relevancia
 - Navegación precisa a geometrías específicas
 - Manejo de diferentes tipos de datos (análisis, denuncias, concesiones)
+- **Problemas en desarrollo de páginas adicionales:**
+- Errores de endpoints 404/500 durante desarrollo de historial
+- Dificultades con lógica de descarga de PDF/KMZ (dependencia de id_analisis)
+- Errores de sintaxis JSX en componentes de reincidencias
+- Problemas con tipos de datos en consultas SQL (STRING_AGG con enteros)
+- **Desafíos en optimización del dashboard:**
+- Integración compleja de Leaflet para mapa de último análisis
+- Errores de bounds en mapas Leaflet
+- Decisiones de diseño entre funcionalidad vs simplicidad
 ---
 
 ### 🔜 Acciones pendientes o planificadas
@@ -71,6 +94,11 @@
 - Modo de comparación de períodos
 - Estadísticas en tiempo real del área visible
 - Integración con reportes PDF/KMZ desde el mapa
+- **Mejoras pendientes en páginas desarrolladas:**
+- Optimización de consultas SQL para mejor rendimiento
+- Implementación de paginación en tablas grandes
+- Mejoras en visualización de gráficos de reincidencias
+- Exportación de datos de reincidencias (CSV, Excel)
 
 ---
 
@@ -88,9 +116,22 @@
 > - Experiencia de usuario mejorada con debouncing y caché inteligente
 > - Errores de bucle infinito completamente eliminados
 > - Popups informativos expandidos con información contextual completa
+> - **Páginas completadas y funcionales:**
+> - Historial de denuncias con datos reales y funcionalidad completa
+> - Análisis de reincidencias con sistema de clasificación de riesgo
+> - Dashboard optimizado y simplificado
+> - **Backend expandido:**
+> - Nuevos endpoints para historial, reincidencias y estadísticas
+> - Consultas SQL complejas para análisis de reincidencias
+> - Integración completa con sistema de autenticación
 
 > **Impacto en la experiencia del usuario:**
 > - Navegación fluida sin interrupciones durante zoom/pan
 > - Búsqueda rápida y resultados organizados por relevancia
 > - Feedback visual apropiado durante cargas y actualizaciones
 > - Interfaz responsiva y profesional
+> - **Nuevas funcionalidades completadas:**
+> - Historial completo con filtros y descargas funcionales
+> - Análisis de reincidencias con clasificación de riesgo visual
+> - Dashboard simplificado y enfocado en acciones principales
+> - Eliminación de redundancias en navegación

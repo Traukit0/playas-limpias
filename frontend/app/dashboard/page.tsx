@@ -2,13 +2,11 @@
 
 import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
-import { FileBarChart, Map, Plus, User, Activity } from "lucide-react"
+import { FileBarChart, Plus, User, Activity, Clock, CheckCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Overview } from "@/components/overview"
 import { RecentInspections } from "@/components/recent-inspections"
-import { InspectionMap } from "@/components/inspection-map"
 import { Badge } from "@/components/ui/badge"
 
 export default function DashboardPage() {
@@ -91,80 +89,18 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Inspecciones</CardTitle>
-              <FileBarChart className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">127</div>
-              <p className="text-xs text-muted-foreground">+5.2% respecto al mes anterior</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Inspecciones este mes</CardTitle>
-              <FileBarChart className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">23</div>
-              <p className="text-xs text-muted-foreground">+12% respecto al mes anterior</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Cumplimiento</CardTitle>
-              <FileBarChart className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">87%</div>
-              <p className="text-xs text-muted-foreground">+2.1% respecto al mes anterior</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Playas Inspeccionadas</CardTitle>
-              <Map className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">15</div>
-              <p className="text-xs text-muted-foreground">+3 nuevas este mes</p>
-            </CardContent>
-          </Card>
-        </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="col-span-4">
-            <CardHeader>
-              <CardTitle>Resumen de Actividad</CardTitle>
-            </CardHeader>
-            <CardContent className="pl-2">
-              <Overview />
-            </CardContent>
-          </Card>
-          <Card className="col-span-3">
-            <CardHeader>
-              <CardTitle>Inspecciones Recientes</CardTitle>
-              <CardDescription>
-                Últimas inspecciones realizadas
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RecentInspections />
-            </CardContent>
-          </Card>
-        </div>
 
+        {/* Inspecciones recientes */}
         <Card>
           <CardHeader>
-            <CardTitle>Mapa de Inspecciones</CardTitle>
+            <CardTitle>Inspecciones Recientes</CardTitle>
             <CardDescription>
-              Ubicación de las inspecciones realizadas
+              Últimas inspecciones realizadas
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <InspectionMap />
+            <RecentInspections />
           </CardContent>
         </Card>
       </div>
