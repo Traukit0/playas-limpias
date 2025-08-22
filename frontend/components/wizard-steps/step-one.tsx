@@ -7,6 +7,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { CalendarIcon } from "lucide-react"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
+import { cn } from "@/lib/utils"
 import type { InspectionData } from "@/components/inspection-wizard"
 import { useWizardAuth } from "@/lib/wizard-config"
 
@@ -32,6 +38,7 @@ export function StepOne({ data, updateData, setInspectionData, onNext }: StepOne
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(false)
   const [error, setError] = useState("")
+  const [calendarOpen, setCalendarOpen] = useState(false)
 
   // Función optimizada para hacer fetch directo
   const fetchData = async (endpoint: string) => {
@@ -79,6 +86,19 @@ export function StepOne({ data, updateData, setInspectionData, onNext }: StepOne
   const handleInputChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     updateData({ [field]: value })
+  }
+
+  const handleDateChange = (date: Date | undefined) => {
+    if (date) {
+      // Asegurar que la fecha se guarde correctamente sin problemas de zona horaria
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const dateString = `${year}-${month}-${day}`
+      
+      handleInputChange("inspectionDate", dateString)
+      setCalendarOpen(false) // Cerrar el calendario después de seleccionar
+    }
   }
 
   const canProceed =
@@ -157,12 +177,55 @@ export function StepOne({ data, updateData, setInspectionData, onNext }: StepOne
           </div>
           <div className="space-y-2">
             <Label htmlFor="inspection-date">Fecha de Inspección *</Label>
-            <Input
-              id="inspection-date"
-              type="date"
-              value={formData.inspectionDate}
-              onChange={(e) => handleInputChange("inspectionDate", e.target.value)}
-            />
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !formData.inspectionDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formData.inspectionDate ? (
+                    format(new Date(formData.inspectionDate + 'T00:00:00'), "PPP", { locale: es })
+                  ) : (
+                    <span>Seleccionar fecha</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={formData.inspectionDate ? new Date(formData.inspectionDate + 'T00:00:00') : undefined}
+                  onSelect={handleDateChange}
+                  disabled={(date) => {
+                    // Obtener la fecha de hoy en la zona horaria local
+                    const today = new Date()
+                    const todayYear = today.getFullYear()
+                    const todayMonth = today.getMonth()
+                    const todayDay = today.getDate()
+                    
+                    // Comparar con la fecha seleccionada
+                    const selectedYear = date.getFullYear()
+                    const selectedMonth = date.getMonth()
+                    const selectedDay = date.getDate()
+                    
+                    // Deshabilitar fechas futuras
+                    if (selectedYear > todayYear) return true
+                    if (selectedYear === todayYear && selectedMonth > todayMonth) return true
+                    if (selectedYear === todayYear && selectedMonth === todayMonth && selectedDay > todayDay) return true
+                    
+                    return false
+                  }}
+                  initialFocus
+                  locale={es}
+                />
+              </PopoverContent>
+            </Popover>
+            <p className="text-xs text-muted-foreground">
+              Solo se permiten fechas hasta el día de hoy
+            </p>
           </div>
         </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
