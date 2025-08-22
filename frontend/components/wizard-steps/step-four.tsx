@@ -1,7 +1,6 @@
 "use client"
 
-import React from "react"
-import { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,7 +11,6 @@ import type { InspectionData } from "@/components/inspection-wizard"
 import { useWizardAuth } from "@/lib/wizard-config"
 import { MapContainer, TileLayer, Marker, GeoJSON, Popup, useMap, Tooltip } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
-import { useRef } from "react"
 import L from "leaflet";
 
 interface StepFourProps {
@@ -63,12 +61,13 @@ interface PreviewResponse {
   distancia_buffer: number
 }
 
-// Componente auxiliar para ajustar el viewport del mapa
-function FitBoundsToEvidencias({ evidencias }: { evidencias: Evidencia[] }) {
+// Componente auxiliar para ajustar el viewport del mapa - MEMOIZADO
+const FitBoundsToEvidencias = React.memo(({ evidencias }: { evidencias: Evidencia[] }) => {
   const map = useMap()
   const hasFit = useRef(false)
+  
   useEffect(() => {
-    if (evidencias.length > 0) {
+    if (evidencias.length > 0 && !hasFit.current) {
       const points = evidencias
         .map(ev =>
           ev.coordenadas && Array.isArray(ev.coordenadas.coordinates)
@@ -76,31 +75,39 @@ function FitBoundsToEvidencias({ evidencias }: { evidencias: Evidencia[] }) {
             : null
         )
         .filter(Boolean) as [number, number][]
+      
       if (points.length > 0) {
         map.fitBounds(points, { padding: [40, 40] })
         hasFit.current = true
       }
     }
   }, [evidencias, map])
+  
   return null
-}
+})
 
 // Función para calcular el centroide de un polígono GeoJSON
-function getPolygonCentroid(geojson: any): L.LatLng | null {
-  const layer = L.geoJSON(geojson);
-  let latlng: L.LatLng | null = null;
-  layer.eachLayer(function (l: any) {
-    if (l.getBounds) {
-      latlng = l.getBounds().getCenter();
-    }
-  });
-  return latlng;
+function getPolygonCentroid(geojson: any): any {
+  try {
+    const layer = L.geoJSON(geojson);
+    let latlng: any = null;
+    layer.eachLayer(function (l: any) {
+      if (l.getBounds) {
+        latlng = l.getBounds().getCenter();
+      }
+    });
+    return latlng;
+  } catch (error) {
+    console.error('Error calculating centroid:', error);
+    return null;
+  }
 }
 
-// Componente auxiliar para crear panes personalizados
-function CustomPanes() {
+// Componente auxiliar para crear panes personalizados - MEMOIZADO
+const CustomPanes = React.memo(() => {
   const map = useMap();
   const panesCreated = useRef(false);
+  
   React.useEffect(() => {
     if (!panesCreated.current) {
       if (!map.getPane('bufferPane')) {
@@ -114,7 +121,133 @@ function CustomPanes() {
       panesCreated.current = true;
     }
   }, [map]);
+  
   return null;
+});
+
+// Componente para las evidencias - MEMOIZADO
+const EvidenciasMarkers = React.memo(({ evidencias }: { evidencias: Evidencia[] }) => {
+  return (
+    <>
+      {evidencias.map(ev =>
+        ev.coordenadas && Array.isArray(ev.coordenadas.coordinates) ? (
+          <Marker
+            key={ev.id_evidencia}
+            position={[ev.coordenadas.coordinates[1], ev.coordenadas.coordinates[0]]}
+          >
+            <Popup>
+              Evidencia #{ev.id_evidencia}
+            </Popup>
+          </Marker>
+        ) : null
+      )}
+    </>
+  );
+});
+
+// Componente para todas las concesiones - MEMOIZADO
+const AllConcesiones = React.memo(({ concesiones }: { concesiones: Concesion[] }) => {
+  return (
+    <>
+      {concesiones.map(c => (
+        <GeoJSON
+          key={`all-${c.id_concesion}`}
+          data={c.geom}
+          style={{ color: "#FFD600", weight: 1, fillOpacity: 0.15 } as any}
+        >
+          <Popup>
+            <div>
+              <div><b>Concesión:</b> {c.nombre}</div>
+              <div><b>Código Centro:</b> {c.codigo_centro}</div>
+              <div><b>Titular:</b> {c.titular}</div>
+              <div><b>Tipo:</b> {c.tipo}</div>
+              <div><b>Región:</b> {c.region}</div>
+            </div>
+          </Popup>
+        </GeoJSON>
+      ))}
+    </>
+  );
+});
+
+// Componente para el buffer - MEMOIZADO
+const BufferLayer = React.memo(({ previewData }: { previewData: PreviewResponse | null }) => {
+  if (!previewData?.buffer_geom) return null;
+  
+  return (
+    <GeoJSON 
+      key={previewData.distancia_buffer} 
+      data={previewData.buffer_geom} 
+      style={{ color: "blue", weight: 2, fillOpacity: 0.2 } as any} 
+      pane="bufferPane" 
+    />
+  );
+});
+
+// Componente para concesiones seleccionadas - MEMOIZADO
+const SelectedConcesiones = React.memo(({ 
+  previewData, 
+  concesiones, 
+  idsConcesionesIntersectadas 
+}: { 
+  previewData: PreviewResponse | null;
+  concesiones: Concesion[];
+  idsConcesionesIntersectadas: number[];
+}) => {
+  if (!previewData) return null;
+  
+  return (
+    <>
+      {concesiones
+        .filter(c => idsConcesionesIntersectadas.includes(c.id_concesion))
+        .map(c => {
+          const centroide = getPolygonCentroid(c.geom);
+          return (
+            <React.Fragment key={c.id_concesion}>
+              <GeoJSON
+                data={c.geom}
+                style={{ color: "red", weight: 2, fillOpacity: 0.3 } as any}
+                pane="selectedPane"
+              >
+                <Popup>
+                  <div>
+                    <div><b>Concesión:</b> {c.nombre}</div>
+                    <div><b>Código Centro:</b> {c.codigo_centro}</div>
+                    <div><b>Titular:</b> {c.titular}</div>
+                    <div><b>Tipo:</b> {c.tipo}</div>
+                    <div><b>Región:</b> {c.region}</div>
+                  </div>
+                </Popup>
+              </GeoJSON>
+              {centroide && (
+                <Marker position={centroide} icon={L.divIcon({ className: 'invisible-marker' }) as any}>
+                  <Tooltip permanent className="tooltip-centro" as any>
+                    <span>{c.codigo_centro}</span>
+                  </Tooltip>
+                </Marker>
+              )}
+            </React.Fragment>
+          );
+        })}
+    </>
+  );
+});
+
+// Hook personalizado para debouncing
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
 }
 
 export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
@@ -134,14 +267,15 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
   const [loadingConcesiones, setLoadingConcesiones] = useState(true)
   const [errorConcesiones, setErrorConcesiones] = useState<string | null>(null)
 
+  // Estados para el buffer
   const [bufferInput, setBufferInput] = useState<number | undefined>(undefined)
   const [bufferPreview, setBufferPreview] = useState<number | undefined>(undefined)
   const [previewData, setPreviewData] = useState<PreviewResponse | null>(null)
   const [loadingPreview, setLoadingPreview] = useState(false)
   const [errorPreview, setErrorPreview] = useState<string | null>(null)
 
-  // Función optimizada para hacer fetch directo
-  const fetchData = async (endpoint: string, options: RequestInit = {}) => {
+  // Función optimizada para hacer fetch directo - MEMOIZADA
+  const fetchData = useCallback(async (endpoint: string, options: RequestInit = {}) => {
     const response = await fetch(`${apiUrl}${endpoint}`, {
       ...options,
       headers: {
@@ -155,7 +289,7 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
     }
     
     return response
-  }
+  }, [apiUrl, token])
 
   // Cargar datos de usuario, estado y evidencias cuando el componente se monta
   useEffect(() => {
@@ -218,7 +352,7 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
     }
 
     cargarDatos()
-  }, [data.id_usuario, data.id_estado, data.id_denuncia, token, apiUrl])
+  }, [data.id_usuario, data.id_estado, data.id_denuncia, fetchData, token])
 
   // Cargar concesiones al montar
   useEffect(() => {
@@ -243,10 +377,14 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
       }
     }
     cargarConcesiones()
-  }, [token, apiUrl])
+  }, [fetchData, token])
 
   // Función para llamar a /analisis/preview
-  const handlePreview = async () => {
+  const handlePreview = useCallback(async () => {
+    if (!bufferInput || bufferInput < 100 || bufferInput > 5000) {
+      return;
+    }
+    
     setLoadingPreview(true)
     setErrorPreview(null)
     try {
@@ -261,7 +399,7 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
         }),
       })
       const json = await res.json()
-      setPreviewData({ ...json, distancia_buffer: bufferInput! })
+      setPreviewData({ ...json, distancia_buffer: bufferInput })
       setBufferPreview(bufferInput)
     } catch (err: any) {
       setErrorPreview(err.message || "Error inesperado")
@@ -269,9 +407,9 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
     } finally {
       setLoadingPreview(false)
     }
-  }
+  }, [bufferInput, data.id_denuncia, fetchData])
 
-  const handleAnalysisConfirmation = async () => {
+  const handleAnalysisConfirmation = useCallback(async () => {
     setIsAnalyzing(true)
     setAnalysisExecuted(true)
 
@@ -322,16 +460,25 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
     } finally {
       setIsAnalyzing(false)
     }
-  }
+  }, [bufferPreview, concesiones, data.id_denuncia, data.observations, fetchData, updateData])
 
-  // Calcular centro del mapa (usar primer evidencia si existe, si no fallback a [0,0])
-  const centro: [number, number] =
-    evidencias.length > 0 && evidencias[0].coordenadas && Array.isArray(evidencias[0].coordenadas.coordinates)
+  // Calcular centro del mapa - MEMOIZADO
+  const centro: [number, number] = useMemo(() => {
+    return evidencias.length > 0 && evidencias[0].coordenadas && Array.isArray(evidencias[0].coordenadas.coordinates)
       ? [evidencias[0].coordenadas.coordinates[1], evidencias[0].coordenadas.coordinates[0]]
       : [-41.4689, -72.9411] // fallback: Puerto Montt
+  }, [evidencias])
 
-  // IDs de concesiones intersectadas
-  const idsConcesionesIntersectadas = previewData?.resultados.map(r => r.id_concesion) || []
+  // IDs de concesiones intersectadas - MEMOIZADO
+  const idsConcesionesIntersectadas = useMemo(() => {
+    return previewData?.resultados.map(r => r.id_concesion) || []
+  }, [previewData])
+
+  // Manejador optimizado para el input de buffer
+  const handleBufferInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value === '' ? undefined : Number(e.target.value)
+    setBufferInput(val)
+  }, [])
 
   return (
     <Card>
@@ -504,10 +651,7 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
             value={bufferInput === undefined ? '' : bufferInput}
             placeholder="Ej: 500"
             disabled={analysisExecuted}
-            onChange={e => {
-              const val = e.target.value === '' ? undefined : Number(e.target.value)
-              setBufferInput(val)
-            }}
+            onChange={handleBufferInputChange}
             className="border rounded px-2 py-1 w-24 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
           <Button
@@ -578,79 +722,22 @@ export function StepFour({ data, updateData, onNext, onPrev }: StepFourProps) {
           </div>
         </div>
 
-        {/* Mapa de análisis con react-leaflet */}
+        {/* Mapa de análisis con react-leaflet optimizado */}
         <div className="space-y-4">
           <h4 className="text-lg font-medium">Mapa de Inspección (Previsualización)</h4>
           <div className="rounded-lg border overflow-hidden">
-            <MapContainer center={centro} zoom={15} style={{ height: 400, width: "100%" }}>
+            <MapContainer center={centro as any} zoom={15} style={{ height: 400, width: "100%" }} as any>
               <CustomPanes />
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               <FitBoundsToEvidencias evidencias={evidencias} />
-              {/* Evidencias */}
-              {evidencias.map(ev =>
-                ev.coordenadas && Array.isArray(ev.coordenadas.coordinates) ? (
-                  <Marker
-                    key={ev.id_evidencia}
-                    position={[ev.coordenadas.coordinates[1], ev.coordenadas.coordinates[0]]}
-                  >
-                    <Popup>
-                      Evidencia #{ev.id_evidencia}
-                    </Popup>
-                  </Marker>
-                ) : null
-              )}
-              {/* Todas las concesiones (amarillo suave) */}
-              {concesiones.map(c => (
-                <GeoJSON
-                  key={`all-${c.id_concesion}`}
-                  data={c.geom}
-                  style={{ color: "#FFD600", weight: 1, fillOpacity: 0.15 }}
-                >
-                  <Popup>
-                    <div>
-                      <div><b>Concesión:</b> {c.nombre}</div>
-                      <div><b>Código Centro:</b> {c.codigo_centro}</div>
-                      <div><b>Titular:</b> {c.titular}</div>
-                      <div><b>Tipo:</b> {c.tipo}</div>
-                      <div><b>Región:</b> {c.region}</div>
-                    </div>
-                  </Popup>
-                </GeoJSON>
-              ))}
-              {/* Buffer (azul) en su propio pane */}
-              {previewData?.buffer_geom && (
-                <GeoJSON key={previewData.distancia_buffer} data={previewData.buffer_geom} style={{ color: "blue", weight: 2, fillOpacity: 0.2 }} pane="bufferPane" />
-              )}
-              {/* Concesiones seleccionadas (rojo) en su propio pane - SIEMPRE ENCIMA */}
-              {previewData && concesiones.filter(c => idsConcesionesIntersectadas.includes(c.id_concesion)).map(c => {
-                const centroide = getPolygonCentroid(c.geom);
-                return (
-                  <React.Fragment key={c.id_concesion}>
-                    <GeoJSON
-                      data={c.geom}
-                      style={{ color: "red", weight: 2, fillOpacity: 0.3 }}
-                      pane="selectedPane"
-                    >
-                      <Popup>
-                        <div>
-                          <div><b>Concesión:</b> {c.nombre}</div>
-                          <div><b>Código Centro:</b> {c.codigo_centro}</div>
-                          <div><b>Titular:</b> {c.titular}</div>
-                          <div><b>Tipo:</b> {c.tipo}</div>
-                          <div><b>Región:</b> {c.region}</div>
-                        </div>
-                      </Popup>
-                    </GeoJSON>
-                    {centroide && (
-                      <Marker position={centroide} icon={L.divIcon({ className: 'invisible-marker' })}>
-                        <Tooltip direction="center" permanent className="tooltip-centro">
-                          <span>{c.codigo_centro}</span>
-                        </Tooltip>
-                      </Marker>
-                    )}
-                  </React.Fragment>
-                );
-              })}
+              <EvidenciasMarkers evidencias={evidencias} />
+              <AllConcesiones concesiones={concesiones} />
+              <BufferLayer previewData={previewData} />
+              <SelectedConcesiones 
+                previewData={previewData} 
+                concesiones={concesiones} 
+                idsConcesionesIntersectadas={idsConcesionesIntersectadas} 
+              />
             </MapContainer>
           </div>
         </div>
