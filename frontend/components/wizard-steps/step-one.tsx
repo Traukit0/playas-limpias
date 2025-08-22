@@ -273,7 +273,21 @@ export function StepOne({ data, updateData, setInspectionData, onNext }: StepOne
         </div>
         <div className="space-y-2">
           <Label htmlFor="fecha_ingreso">Fecha de Ingreso *</Label>
-          <Input id="fecha_ingreso" value={formData.fecha_ingreso.slice(0, 10)} readOnly />
+          <Input 
+            id="fecha_ingreso" 
+            value={(() => {
+              try {
+                const date = new Date(formData.fecha_ingreso)
+                return format(date, "PPP", { locale: es })
+              } catch {
+                return formData.fecha_ingreso.slice(0, 10)
+              }
+            })()} 
+            readOnly 
+          />
+          <p className="text-xs text-muted-foreground">
+            Esta fecha se establece automáticamente al momento de crear la inspección
+          </p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="observations">Observaciones Generales *</Label>
