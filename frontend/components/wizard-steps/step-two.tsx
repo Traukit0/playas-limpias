@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Upload, X, MapPin, FileText } from "lucide-react"
+import { Upload, X, MapPin, FileText, Info } from "lucide-react"
 import type { InspectionData } from "@/components/inspection-wizard"
 import { useWizardAuth } from "@/lib/wizard-config"
 import { MapContainer, TileLayer, Marker, Popup, useMap, LayersControl } from 'react-leaflet'
@@ -198,16 +198,42 @@ export function StepTwo({ data, updateData, onNext, onPrev }: StepTwoProps) {
           <select
             className="border rounded px-3 py-2"
             value={utcOffset ?? ""}
-                            onChange={e => {
-                  const value = Number(e.target.value)
-                  setUtcOffset(value)
-                  updateData({ utcOffset: value })
-                }}
+            onChange={e => {
+              const value = Number(e.target.value)
+              setUtcOffset(value)
+              updateData({ utcOffset: value })
+            }}
           >
             <option value="" disabled>Seleccione un offset</option>
-            <option value="-3">-3</option>
-            <option value="-4">-4</option>
+            <option value="-3">UTC -3 (Horario de verano - Septiembre a Marzo)</option>
+            <option value="-4">UTC -4 (Horario de invierno - Marzo a Septiembre)</option>
           </select>
+        </div>
+
+        {/* Caja de instrucciones */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="text-sm">
+              <h4 className="font-medium text-blue-900 mb-2">Instrucciones para Cargar Waypoints GPS</h4>
+              <ol className="list-decimal list-inside space-y-1 text-blue-800">
+                <li><strong>Seleccione la zona horaria:</strong> Elija el offset UTC correspondiente al momento de la inspección:
+                  <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                    <li><strong>UTC -3:</strong> Horario de verano (Septiembre a Marzo)</li>
+                    <li><strong>UTC -4:</strong> Horario de invierno (Marzo a Septiembre)</li>
+                  </ul>
+                </li>
+                <li><strong>Cargue el archivo GPX:</strong> Arrastre y suelte o seleccione el archivo GPX desde su dispositivo</li>
+                <li><strong>Verifique el formato:</strong> Asegúrese de que el archivo sea un GPX válido con waypoints o tracks</li>
+                <li><strong>Suba el archivo:</strong> Presione "Subir Archivo" para procesar los datos GPS</li>
+                <li><strong>Revise la previsualización:</strong> Verifique que los puntos se muestren correctamente en el mapa</li>
+                <li><strong>Continúe al siguiente paso:</strong> Una vez procesado, podrá avanzar a la carga de fotografías</li>
+              </ol>
+              <div className="mt-3 p-2 bg-blue-100 rounded">
+                <strong>Nota importante:</strong> El archivo GPX debe contener coordenadas GPS válidas. Los waypoints se procesarán automáticamente y se asociarán a la denuncia.
+              </div>
+            </div>
+          </div>
         </div>
         {!file ? (
           <div
