@@ -1,7 +1,7 @@
 "use client"
 
 import { useAuth } from "@/hooks/use-auth"
-import { Bell, LogOut, Settings, User } from "lucide-react"
+import { LogOut, Settings, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
@@ -73,14 +73,6 @@ export function AuthenticatedNavbar() {
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Notificaciones */}
-          <Button variant="ghost" size="sm" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white">
-              3
-            </span>
-          </Button>
-
           {/* Menú de usuario */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
